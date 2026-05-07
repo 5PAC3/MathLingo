@@ -29,6 +29,7 @@ app.add_middleware(
 
 _exercise_store: dict[str, str] = {}
 _skilltree_path = Path(__file__).parent.parent / "skilltree.json"
+_content_dir = Path(__file__).parent.parent / "content" / "nodes"
 
 
 @app.on_event("startup")
@@ -111,6 +112,17 @@ def update_progress(
         int(body.completed),
     )
     return {"ok": True}
+
+
+# ── Content / Theory ─────────────────────────────────────────────
+
+
+@app.get("/content/{node_id}")
+def get_content(node_id: str):
+    filepath = _content_dir / f"{node_id}.md"
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Theory not found")
+    return {"node_id": node_id, "content": filepath.read_text(encoding="utf-8")}
 
 
 # ── Skill Tree ───────────────────────────────────────────────────

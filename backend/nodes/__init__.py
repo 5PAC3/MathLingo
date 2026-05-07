@@ -19,4 +19,8 @@ def list_nodes() -> list[str]:
 
 
 from .aritmetica import addizione  # noqa: F401, E402
+from .aritmetica import sottrazione  # noqa: F401, E402
+from .aritmetica import moltiplicazione  # noqa: F401, E402
+from .aritmetica import divisione  # noqa: F401, E402
 from .algebra import equazioni  # noqa: F401, E402
+from .informatica import algebra_booleana  # noqa: F401, E402

@@ -17,12 +17,17 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function NodeView({ nodeId, onBack }: NodeViewProps) {
   const [tree, setTree] = useState<SkillTreeData | null>(null)
+  const [theory, setTheory] = useState<string | null>(null)
+  const [theoryError, setTheoryError] = useState(false)
   const [level, setLevel] = useState(1)
   const [showTheory, setShowTheory] = useState(true)
 
   useEffect(() => {
     api.get<SkillTreeData>('/skilltree').then(setTree)
-  }, [])
+    api.get<{ content: string }>(`/content/${nodeId}`)
+      .then(res => { setTheory(res.content); setTheoryError(false) })
+      .catch(() => { setTheory(null); setTheoryError(true) })
+  }, [nodeId])
 
   const nodeInfo = tree?.nodes.find(n => n.id === nodeId)
 
@@ -62,8 +67,10 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
         </button>
         {showTheory && (
           <div style={{ lineHeight: 1.7, color: 'var(--muted)', fontSize: '0.95rem' }}>
-            {nodeInfo ? (
-              <p>Teoria per &ldquo;{nodeInfo.label}&rdquo; — contenuto in arrivo.</p>
+            {theory ? (
+              <div style={{ whiteSpace: 'pre-wrap' }}>{theory}</div>
+            ) : theoryError ? (
+              <p>Teoria non disponibile per questo nodo.</p>
             ) : (
               <p>Caricamento...</p>
             )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { api, type ExerciseData, type ValidationResult } from '@/lib/api'
 
 interface ExerciseInputProps {
@@ -15,6 +15,20 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
   const [showHints, setShowHints] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [stats, setStats] = useState({ correct: 0, total: 0 })
+
+  const saveProgress = useCallback(async (score: number) => {
+    try {
+      await api.post('/progress', {
+        node_id: nodeId,
+        level,
+        score,
+        completed: score >= 70,
+      })
+    } catch {
+      // silent
+    }
+  }, [nodeId, level])
 
   const loadExercise = async () => {
     setBusy(true)
@@ -26,7 +40,8 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
       const data = await api.post<ExerciseData>('/exercise/generate', { node_id: nodeId, level })
       setExercise(data)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Errore')
+      setError(err instanceof Error ? err.message : 'Errore durante la generazione')
+      setExercise(null)
     } finally {
       setBusy(false)
     }
@@ -43,8 +58,16 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
         user_answer: answer,
       })
       setResult(data)
+
+      const newTotal = stats.total + 1
+      const newCorrect = stats.correct + (data.correct ? 1 : 0)
+      const newStats = { correct: newCorrect, total: newTotal }
+      setStats(newStats)
+
+      const score = Math.round((newCorrect / newTotal) * 100)
+      await saveProgress(score)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Errore')
+      setError(err instanceof Error ? err.message : 'Errore durante la validazione')
     } finally {
       setBusy(false)
     }
@@ -107,6 +130,12 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
                 </p>
               )}
             </div>
+          )}
+
+          {stats.total > 0 && (
+            <p className="text-muted" style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+              Progresso livello: {stats.correct}/{stats.total} corretti ({Math.round((stats.correct / stats.total) * 100)}%)
+            </p>
           )}
 
           {exercise.hints.length > 0 && (
