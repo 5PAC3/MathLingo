@@ -1,6 +1,7 @@
 import hashlib
 import json
 import random
+import sqlite3
 from pathlib import Path
 
 import sympy as sp
@@ -98,19 +99,22 @@ def update_progress(
     body: ProgressUpdate,
     user: dict = Depends(auth.get_current_user),
 ):
-    db.execute(
-        """INSERT INTO progress (user_id, node_id, level, score, completed, updated_at)
-           VALUES (?, ?, ?, ?, ?, datetime('now'))
-           ON CONFLICT(user_id, node_id, level)
-           DO UPDATE SET score = excluded.score,
-                         completed = excluded.completed,
-                         updated_at = datetime('now')""",
-        user["user_id"],
-        body.node_id,
-        body.level,
-        body.score,
-        int(body.completed),
-    )
+    try:
+        db.execute(
+            """INSERT INTO progress (user_id, node_id, level, score, completed, updated_at)
+               VALUES (?, ?, ?, ?, ?, datetime('now'))
+               ON CONFLICT(user_id, node_id, level)
+               DO UPDATE SET score = excluded.score,
+                             completed = excluded.completed,
+                             updated_at = datetime('now')""",
+            user["user_id"],
+            body.node_id,
+            body.level,
+            body.score,
+            int(body.completed),
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=401, detail="User not found — token invalido")
     return {"ok": True}
 
 
