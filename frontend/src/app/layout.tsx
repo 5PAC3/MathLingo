@@ -12,9 +12,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="it" suppressHydrationWarning>
       <body>
+        <a href="#main-content" className="skip-link">
+          Salta al contenuto
+        </a>
         <ThemeProvider>
           <AuthProvider>
-            {children}
+            <main id="main-content">
+              {children}
+            </main>
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { api, type ExerciseData, type ValidationResult } from '@/lib/api'
 
 interface ExerciseInputProps {
@@ -16,6 +16,9 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [stats, setStats] = useState({ correct: 0, total: 0 })
+  const [focusTarget, setFocusTarget] = useState<'input' | 'result' | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const resultRef = useRef<HTMLDivElement>(null)
 
   const saveProgress = useCallback(
     async (score: number) => {
@@ -45,6 +48,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
         level,
       })
       setExercise(data)
+      setFocusTarget('input')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Errore durante la generazione')
       setExercise(null)
@@ -72,12 +76,28 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
 
       const score = Math.round((newCorrect / newTotal) * 100)
       await saveProgress(score)
+
+      setFocusTarget('result')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Errore durante la validazione')
     } finally {
       setBusy(false)
     }
   }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault()
+      const form = (e.target as HTMLElement).closest('form')
+      form?.requestSubmit()
+    }
+  }
+
+  useEffect(() => {
+    if (focusTarget === 'input') inputRef.current?.focus()
+    else if (focusTarget === 'result') resultRef.current?.focus()
+    setFocusTarget(null)
+  }, [focusTarget])
 
   return (
     <div>
@@ -101,6 +121,8 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
                 fontSize: '1.1rem',
                 fontWeight: 600,
                 lineHeight: 1.4,
+                overflowWrap: 'break-word',
+                wordBreak: 'break-word',
               }}
             >
               {exercise.question}
@@ -110,8 +132,9 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               onClick={loadExercise}
               disabled={busy}
               style={{ flexShrink: 0 }}
+              aria-busy={busy}
             >
-              Cambia
+              {busy ? 'Carica...' : 'Cambia'}
             </button>
           </div>
 
@@ -124,13 +147,20 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               alignItems: 'flex-start',
             }}
           >
+            <label htmlFor="exercise-answer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+              La tua risposta
+            </label>
             <input
+              id="exercise-answer"
+              ref={inputRef}
               value={answer}
               onChange={e => setAnswer(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="La tua risposta..."
               disabled={!!result || busy}
+              autoComplete="off"
+              spellCheck={false}
               style={{ flex: 1 }}
-              autoFocus
             />
             <button
               type="submit"
@@ -138,9 +168,22 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               disabled={!!result || busy || !answer.trim()}
               style={{ flexShrink: 0 }}
             >
-              {busy ? '...' : 'Verifica'}
+              {busy ? 'Verifica...' : 'Verifica'}
             </button>
           </form>
+
+          <div
+            style={{
+              marginTop: '0.3rem',
+              fontSize: '0.75rem',
+              color: 'var(--fg-muted)',
+              opacity: 0.6,
+              userSelect: 'none',
+            }}
+            aria-hidden="true"
+          >
+            Ctrl+Enter per inviare
+          </div>
 
           <style>{`
             @media (max-width: 480px) {
@@ -170,6 +213,10 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
 
           {result && (
             <div
+              ref={resultRef}
+              tabIndex={-1}
+              role="status"
+              aria-live="polite"
               style={{
                 marginTop: '1rem',
                 padding: '0.8rem 1rem',
@@ -177,6 +224,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
                 background: result.correct ? 'var(--success-bg)' : 'var(--danger-bg)',
                 color: result.correct ? 'var(--success-fg)' : 'var(--danger-fg)',
                 animation: 'fadeIn 0.2s ease',
+                outline: 'none',
               }}
             >
               <p style={{ fontWeight: 700 }}>
@@ -198,6 +246,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
                 alignItems: 'center',
                 gap: '0.75rem',
               }}
+              aria-label={`Progresso: ${stats.correct} corretti su ${stats.total} totali`}
             >
               <div
                 style={{
@@ -207,6 +256,10 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
                   background: 'var(--bg-alt)',
                   overflow: 'hidden',
                 }}
+                role="progressbar"
+                aria-valuenow={Math.round((stats.correct / stats.total) * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
               >
                 <div
                   style={{
@@ -236,6 +289,8 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               <button
                 className="btn btn-sm btn-ghost"
                 onClick={() => setShowHints(!showHints)}
+                aria-expanded={showHints}
+                aria-controls="hints-list"
                 style={{
                   color: 'var(--fg-muted)',
                   fontSize: '0.85rem',
@@ -245,6 +300,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               </button>
               {showHints && (
                 <ul
+                  id="hints-list"
                   style={{
                     marginTop: '0.5rem',
                     paddingLeft: '1.2rem',
@@ -263,12 +319,6 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
         </div>
       )}
 
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   )
 }

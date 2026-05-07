@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, type CSSProperties } from 'react'
 import { api, type SkillTreeData, type ProgressData, type SkillEdge } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 
@@ -39,12 +39,12 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
   levels: NodeLayout[][]
   edges: SkillEdge[]
 } {
-  const levels = new Map<string, number>()
+  const levelsMap = new Map<string, number>()
   const inDegree = new Map<string, number>()
   const adj = new Map<string, string[]>()
 
   for (const n of tree.nodes) {
-    levels.set(n.id, 0)
+    levelsMap.set(n.id, 0)
     inDegree.set(n.id, 0)
     adj.set(n.id, [])
   }
@@ -60,7 +60,7 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
   while (queue.length > 0) {
     const id = queue.shift()!
     for (const next of adj.get(id) || []) {
-      levels.set(next, Math.max(levels.get(next)!, levels.get(id)! + 1))
+      levelsMap.set(next, Math.max(levelsMap.get(next)!, levelsMap.get(id)! + 1))
       const d = inDegree.get(next)!
       inDegree.set(next, d - 1)
       if (d - 1 === 0) queue.push(next)
@@ -69,7 +69,7 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
 
   const byLevel = new Map<number, NodeLayout[]>()
   for (const n of tree.nodes) {
-    const l = levels.get(n.id) || 0
+    const l = levelsMap.get(n.id) || 0
     const p = progress[n.id]
     const completed = p
       ? Object.values(p).every((v: { completed: boolean }) => v.completed)
@@ -97,6 +97,7 @@ function ArrowIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
       style={{ display: 'block' }}
     >
       <line x1="12" y1="4" x2="12" y2="18" />
@@ -105,9 +106,37 @@ function ArrowIcon() {
   )
 }
 
+function skillNodeClass(completed: boolean): string {
+  return `skill-node ${completed ? 'skill-node--completed' : ''}`
+}
+
+function nodeStyle(color: string, completed: boolean): CSSProperties {
+  return {
+    flex: '1 1 200px',
+    maxWidth: 280,
+    minWidth: 160,
+    padding: '1rem 1.25rem',
+    border: 'none',
+    borderLeft: `4px solid ${color}`,
+    background: completed
+      ? `linear-gradient(135deg, ${color}22, transparent)`
+      : 'var(--card-bg)',
+    boxShadow: completed
+      ? `${color}33 0 0 0 1px inset, var(--shadow)`
+      : 'var(--shadow)',
+    cursor: 'pointer',
+    textAlign: 'left',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+  }
+}
+
 export default function SkillTree({ onNodeClick }: SkillTreeProps) {
   const [tree, setTree] = useState<SkillTreeData | null>(null)
   const [progress, setProgress] = useState<ProgressData>({})
+  const [focusIdx, setFocusIdx] = useState(0)
+  const nodeRefs = useRef<(HTMLButtonElement | null)[]>([])
   const { token } = useAuth()
 
   useEffect(() => {
@@ -125,9 +154,56 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
     [tree, progress],
   )
 
+  const flatNodes = useMemo(
+    () => layout?.levels.flat() ?? [],
+    [layout],
+  )
+
+  useEffect(() => {
+    nodeRefs.current = nodeRefs.current.slice(0, flatNodes.length)
+  }, [flatNodes.length])
+
+  const focusNode = useCallback((idx: number) => {
+    const btn = nodeRefs.current[idx]
+    if (btn) {
+      btn.focus()
+      setFocusIdx(idx)
+    }
+  }, [])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const len = flatNodes.length
+    if (len === 0) return
+
+    let next = focusIdx
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        e.preventDefault()
+        next = focusIdx + 1 < len ? focusIdx + 1 : 0
+        break
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        e.preventDefault()
+        next = focusIdx - 1 >= 0 ? focusIdx - 1 : len - 1
+        break
+      case 'Home':
+        e.preventDefault()
+        next = 0
+        break
+      case 'End':
+        e.preventDefault()
+        next = len - 1
+        break
+      default:
+        return
+    }
+    focusNode(next)
+  }, [focusIdx, flatNodes.length, focusNode])
+
   if (!layout) {
     return (
-      <div style={{ padding: '3rem 0' }}>
+      <div style={{ padding: '3rem 0' }} role="status" aria-label="Caricamento">
         <div className="spinner" />
       </div>
     )
@@ -137,8 +213,13 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
     return <p className="text-center text-muted">Nessun nodo disponibile.</p>
   }
 
+  let globalIdx = 0
+
   return (
     <div
+      role="tree"
+      aria-label="Albero delle competenze"
+      onKeyDown={handleKeyDown}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -152,45 +233,22 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
             className="flex flex-wrap justify-center gap-2"
             style={{ width: '100%' }}
           >
-            {nodes.map(node => {
+            {nodes.map((node, nodeIdx) => {
               const color = categoryColor(node.category)
+              const idx = globalIdx++
               return (
                 <button
                   key={node.id}
+                  ref={el => { nodeRefs.current[idx] = el }}
+                  role="treeitem"
+                  aria-label={`${node.label} — ${categoryLabel(node.category)}${node.completed ? ' — Completato' : ''}`}
+                  aria-setsize={nodes.length}
+                  aria-posinset={nodeIdx + 1}
+                  tabIndex={idx === focusIdx ? 0 : -1}
                   onClick={() => onNodeClick(node.id)}
                   title={node.description}
-                  className="card"
-                  style={{
-                    flex: '1 1 200px',
-                    maxWidth: 280,
-                    minWidth: 160,
-                    padding: '1rem 1.25rem',
-                    border: 'none',
-                    borderLeft: `4px solid ${color}`,
-                    background: node.completed
-                      ? `linear-gradient(135deg, ${color}22, transparent)`
-                      : 'var(--card-bg)',
-                    boxShadow: node.completed
-                      ? `${color}33 0 0 0 1px inset, var(--shadow)`
-                      : 'var(--shadow)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition:
-                      'transform 0.15s, box-shadow var(--transition)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.25rem',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                    e.currentTarget.style.boxShadow = 'var(--shadow-hover)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = ''
-                    e.currentTarget.style.boxShadow = node.completed
-                      ? `${color}33 0 0 0 1px inset, var(--shadow)`
-                      : 'var(--shadow)'
-                  }}
+                  className={skillNodeClass(node.completed)}
+                  style={nodeStyle(color, node.completed)}
                 >
                   <div
                     className="flex items-center justify-between"
@@ -206,7 +264,12 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
                       {node.label}
                     </span>
                     {node.completed && (
-                      <span style={{ color, fontSize: '1.1rem' }}>✓</span>
+                      <span
+                        aria-label="Completato"
+                        style={{ color, fontSize: '1.1rem' }}
+                      >
+                        ✓
+                      </span>
                     )}
                   </div>
                   <span
@@ -232,6 +295,7 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
                 color: 'var(--fg-muted)',
                 opacity: 0.5,
               }}
+              aria-hidden="true"
             >
               <ArrowIcon />
             </div>

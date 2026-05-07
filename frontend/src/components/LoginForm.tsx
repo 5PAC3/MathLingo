@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/lib/auth'
 
 interface LoginFormProps {
@@ -14,6 +14,16 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+  const usernameRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    usernameRef.current?.focus()
+  }, [mode])
+
+  const submitLabel = mode === 'login' ? 'Entra' : 'Crea account'
+  const toggleLabel = mode === 'login' ? 'Registrati' : 'Accedi'
+  const togglePrompt = mode === 'login' ? 'Non hai un account? ' : 'Hai già un account? '
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,9 +60,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             MathLingo
           </h1>
           <p className="text-muted" style={{ marginTop: '0.25rem' }}>
-            {mode === 'login'
-              ? 'Accedi al tuo account'
-              : 'Crea un nuovo account'}
+            {mode === 'login' ? 'Accedi al tuo account' : 'Crea un nuovo account'}
           </p>
         </div>
 
@@ -60,9 +68,11 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           onSubmit={handleSubmit}
           className="flex flex-col gap-2"
           style={{ marginTop: '1.5rem' }}
+          aria-label={mode === 'login' ? 'Modulo di accesso' : 'Modulo di registrazione'}
         >
           {error && (
             <div
+              role="alert"
               style={{
                 background: 'var(--danger-bg)',
                 color: 'var(--danger-fg)',
@@ -76,23 +86,56 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             </div>
           )}
 
-          <input
-            placeholder="Username"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            required
-            minLength={3}
-            autoFocus
-          />
+          <div>
+            <label htmlFor="login-username" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+              Username
+            </label>
+            <input
+              id="login-username"
+              ref={usernameRef}
+              placeholder="Username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              required
+              minLength={3}
+              autoComplete="username"
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            minLength={4}
-          />
+          <div style={{ position: 'relative' }}>
+            <label htmlFor="login-password" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+              Password
+            </label>
+            <input
+              id="login-password"
+              type={showPw ? 'text' : 'password'}
+              placeholder="Password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              minLength={4}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              style={{ paddingRight: '2.5rem' }}
+            />
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => setShowPw(!showPw)}
+              aria-label={showPw ? 'Nascondi password' : 'Mostra password'}
+              style={{
+                position: 'absolute',
+                right: '0.25rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '0.9rem',
+                color: 'var(--fg-muted)',
+                lineHeight: 1,
+                padding: '0.3rem 0.4rem',
+              }}
+            >
+              {showPw ? 'Nascondi' : 'Mostra'}
+            </button>
+          </div>
 
           <button
             type="submit"
@@ -100,11 +143,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             disabled={busy}
             style={{ marginTop: '0.5rem', width: '100%' }}
           >
-            {busy
-              ? '...'
-              : mode === 'login'
-                ? 'Entra'
-                : 'Crea account'}
+            {busy ? 'Caricamento...' : submitLabel}
           </button>
         </form>
 
@@ -116,9 +155,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             color: 'var(--fg-muted)',
           }}
         >
-          {mode === 'login'
-            ? 'Non hai un account? '
-            : 'Hai già un account? '}
+          {togglePrompt}
           <button
             type="button"
             className="btn-ghost btn-sm"
@@ -133,7 +170,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               setError('')
             }}
           >
-            {mode === 'login' ? 'Registrati' : 'Accedi'}
+            {toggleLabel}
           </button>
         </p>
       </div>

@@ -13,7 +13,11 @@ export default function TreePage() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  if (!mounted || loading) {
+  useEffect(() => {
+    if (mounted && !loading && !user) router.push('/login')
+  }, [mounted, loading, user, router])
+
+  if (!mounted || loading || !user) {
     return (
       <>
         <Navbar />
@@ -22,11 +26,6 @@ export default function TreePage() {
         </div>
       </>
     )
-  }
-
-  if (!user) {
-    router.push('/login')
-    return null
   }
 
   return (

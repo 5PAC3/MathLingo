@@ -15,7 +15,11 @@ export default function NodePage() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  if (!mounted || loading) {
+  useEffect(() => {
+    if (mounted && !loading && !user) router.push('/login')
+  }, [mounted, loading, user, router])
+
+  if (!mounted || loading || !user) {
     return (
       <>
         <Navbar />
@@ -24,11 +28,6 @@ export default function NodePage() {
         </div>
       </>
     )
-  }
-
-  if (!user) {
-    router.push('/login')
-    return null
   }
 
   return (

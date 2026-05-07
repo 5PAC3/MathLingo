@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
+import Link from 'next/link'
 import { api, type SkillTreeData } from '@/lib/api'
 import ExerciseInput from './ExerciseInput'
 
@@ -10,6 +11,68 @@ type Fragment =
   | { t: 'bold'; v: string }
   | { t: 'math'; v: string }
 
+const LATEX_SYMBOLS: Record<string, string> = {
+  '\\div': '÷',
+  '\\times': '×',
+  '\\pm': '±',
+  '\\mp': '∓',
+  '\\cdot': '·',
+  '\\neq': '≠',
+  '\\le': '≤',
+  '\\ge': '≥',
+  '\\to': '→',
+  '\\mapsto': '↦',
+  '\\forall': '∀',
+  '\\exists': '∃',
+  '\\in': '∈',
+  '\\notin': '∉',
+  '\\subset': '⊂',
+  '\\supset': '⊃',
+  '\\cup': '∪',
+  '\\cap': '∩',
+  '\\infty': '∞',
+  '\\partial': '∂',
+  '\\pi': 'π',
+  '\\cdots': '⋯',
+  '\\vdots': '⋮',
+  '\\ddots': '⋱',
+  '\\Longrightarrow': '⟹',
+  '\\implies': '⟹',
+  '\\Longleftrightarrow': '⟺',
+  '\\iff': '⟺',
+  '\\Leftrightarrow': '⇔',
+  '\\Rightarrow': '⇒',
+  '\\leftarrow': '←',
+  '\\rightarrow': '→',
+  '\\leftrightarrow': '↔',
+  '\\approx': '≈',
+  '\\equiv': '≡',
+  '\\cdotp': '·',
+  '\\ldots': '…',
+  '\\quad': '  ',
+  '\\qquad': '    ',
+}
+
+const LATEX_BRACED: [RegExp, string][] = [
+  [/\\text\{([^}]*)\}/g, '$1'],
+  [/\\underbrace\{([^}]*)\}_\{([^}]*)\}/g, '$1 ($2)'],
+  [/\\overbrace\{([^}]*)\}^\{([^}]*)\}/g, '$1 ($2)'],
+  [/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2'],
+  [/\\sqrt\{([^}]*)\}/g, '√($1)'],
+  [/\\sqrt\[(\d+)\]\{([^}]*)\}/g, '$1√($2)'],
+]
+
+function latexToText(math: string): string {
+  let s = math
+  for (const [cmd, sym] of Object.entries(LATEX_SYMBOLS)) {
+    s = s.replaceAll(cmd, sym)
+  }
+  for (const [re, repl] of LATEX_BRACED) {
+    s = s.replace(re, repl)
+  }
+  return s
+}
+
 function renderInline(text: string): ReactNode[] {
   const fragments: Fragment[] = []
   let s = text
@@ -17,7 +80,7 @@ function renderInline(text: string): ReactNode[] {
     const bold = s.match(/^\*\*(.+?)\*\*/)
     if (bold) { fragments.push({ t: 'bold', v: bold[1] }); s = s.slice(bold[0].length); continue }
     const math = s.match(/^\$(.+?)\$/)
-    if (math) { fragments.push({ t: 'math', v: math[1] }); s = s.slice(math[0].length); continue }
+    if (math) { fragments.push({ t: 'math', v: latexToText(math[1]) }); s = s.slice(math[0].length); continue }
     const next = s.search(/\*\*|\$/)
     if (next === -1) { fragments.push({ t: 'text', v: s }); break }
     if (next > 0) { fragments.push({ t: 'text', v: s.slice(0, next) }); s = s.slice(next); continue }
@@ -25,7 +88,7 @@ function renderInline(text: string): ReactNode[] {
   }
   return fragments.map((f, i) => {
     if (f.t === 'bold') return <strong key={i}>{f.v}</strong>
-    if (f.t === 'math') return <code key={i} style={{ background: 'var(--bg-alt)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.95rem', color: 'var(--fg)' }}>{f.v}</code>
+    if (f.t === 'math') return <code key={i} style={{ background: 'var(--bg-alt)', padding: '0.1rem 0.35rem', borderRadius: 'var(--radius-sm)', fontSize: '0.95rem', color: 'var(--fg)' }}>{f.v}</code>
     return f.v
   })
 }
@@ -47,7 +110,7 @@ function renderLine(line: string, i: number): ReactNode | null {
   }
 
   if (trim.startsWith('$$') && trim.endsWith('$$')) {
-    return <code key={i} style={{ display: 'block', textAlign: 'center', padding: '0.5rem', background: 'var(--bg-alt)', borderRadius: 'var(--radius-sm)', margin: '0.5rem 0', fontSize: '1.05rem', color: 'var(--fg)' }}>{trim.slice(2, -2)}</code>
+    return <code key={i} style={{ display: 'block', textAlign: 'center', padding: '0.5rem', background: 'var(--bg-alt)', borderRadius: 'var(--radius-sm)', margin: '0.5rem 0', fontSize: '1.05rem', color: 'var(--fg)' }}>{latexToText(trim.slice(2, -2))}</code>
   }
 
   // skip table header/separator rows
@@ -83,6 +146,10 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
   const [theoryError, setTheoryError] = useState(false)
   const [level, setLevel] = useState(1)
   const [showTheory, setShowTheory] = useState(true)
+  const [showBackToTop, setShowBackToTop] = useState(false)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const onBackRef = useRef(onBack)
+  onBackRef.current = onBack
 
   useEffect(() => {
     api.get<SkillTreeData>('/skilltree').then(setTree)
@@ -98,51 +165,71 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
       })
   }, [nodeId])
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.repeat) onBackRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [nodeId])
+
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 400)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   const nodeInfo = tree?.nodes.find(n => n.id === nodeId)
   const color = nodeInfo ? categoryColor(nodeInfo.category) : 'var(--primary)'
+  const nodeLabel = nodeInfo?.label || nodeId
 
   return (
-    <div className="container" style={{ paddingTop: '0.5rem' }}>
-      <button
-        className="btn btn-sm btn-ghost mb-2"
-        onClick={onBack}
-        style={{ fontSize: '0.9rem' }}
-      >
-        ← Torna allo Skill Tree
-      </button>
+    <>
+      <div className="container" style={{ paddingTop: '0.5rem' }}>
+        <nav aria-label="Breadcrumb" className="breadcrumb">
+          <Link href="/tree">Skill Tree</Link>
+          <span aria-hidden="true">›</span>
+          <span aria-current="page">{nodeLabel}</span>
+        </nav>
 
-      {nodeInfo && (
-        <div className="card mb-2" style={{ borderLeft: `4px solid ${color}` }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '0.35rem',
-              flexWrap: 'wrap',
-            }}
-          >
-            <h1 style={{ fontSize: '1.4rem' }}>{nodeInfo.label}</h1>
-            <span
-              className="badge"
+        {nodeInfo && (
+          <div className="card mb-2" style={{ borderLeft: `4px solid ${color}` }}>
+            <div
               style={{
-                background: `${color}18`,
-                color,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                marginBottom: '0.35rem',
+                flexWrap: 'wrap',
               }}
             >
-              {CATEGORY_LABELS[nodeInfo.category] || nodeInfo.category}
-            </span>
+              <h1 ref={headingRef} tabIndex={-1} style={{ fontSize: '1.4rem' }}>{nodeInfo.label}</h1>
+              <span
+                className="badge"
+                style={{
+                  background: `${color}18`,
+                  color,
+                }}
+              >
+                {CATEGORY_LABELS[nodeInfo.category] || nodeInfo.category}
+              </span>
+            </div>
+            <p className="text-muted" style={{ fontSize: '0.95rem' }}>
+              {nodeInfo.description}
+            </p>
           </div>
-          <p className="text-muted" style={{ fontSize: '0.95rem' }}>
-            {nodeInfo.description}
-          </p>
-        </div>
-      )}
+        )}
 
       <div className="card mb-2">
         <button
           className="btn btn-sm btn-ghost"
           onClick={() => setShowTheory(!showTheory)}
+          aria-expanded={showTheory}
+          aria-controls="theory-content"
           style={{
             marginBottom: showTheory && theory ? '0.75rem' : 0,
             fontSize: '0.9rem',
@@ -150,43 +237,54 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
             fontWeight: 600,
           }}
         >
-          {showTheory ? '▼' : '▶'} Teoria
-        </button>
-        {showTheory && (
-          <div
+          <span
             style={{
-              lineHeight: 1.8,
-              color: 'var(--fg-muted)',
-              fontSize: '0.94rem',
+              display: 'inline-block',
+              transition: 'transform 0.2s ease',
+              transform: showTheory ? 'rotate(90deg)' : 'rotate(0deg)',
             }}
           >
-            {theory ? (
-              <div
-                style={{
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {theory.split('\n').map((line, i) => renderLine(line, i))}
-              </div>
-            ) : theoryError ? (
-              <p className="text-muted">
-                Teoria non disponibile per questo nodo.
-              </p>
-            ) : (
-              <div className="spinner" />
-            )}
-          </div>
-        )}
+            ▶
+          </span>{' '}
+          Teoria
+        </button>
+        <div
+          id="theory-content"
+          style={{
+            display: showTheory ? 'block' : 'none',
+            lineHeight: 1.8,
+            color: 'var(--fg-muted)',
+            fontSize: '0.94rem',
+          }}
+        >
+          {theory ? (
+            <div
+              style={{
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {theory.split('\n').map((line, i) => renderLine(line, i))}
+            </div>
+          ) : theoryError ? (
+            <p className="text-muted">
+              Teoria non disponibile per questo nodo.
+            </p>
+          ) : (
+            <div className="spinner" />
+          )}
+        </div>
       </div>
 
       <div className="card">
         <div className="flex items-center justify-between mb-2" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2 style={{ fontSize: '1.1rem' }}>Esercizi</h2>
-          <div className="flex gap-1">
+          <div className="flex gap-1" role="tablist" aria-label="Livello di difficoltà">
             {[1, 2, 3].map(l => (
               <button
                 key={l}
+                role="tab"
+                aria-selected={level === l}
                 className={`btn btn-sm ${level === l ? 'btn' : 'btn-outline'}`}
                 onClick={() => setLevel(l)}
               >
@@ -202,5 +300,14 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
         />
       </div>
     </div>
+
+      <button
+        className={`back-to-top ${showBackToTop ? 'visible' : ''}`}
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="Torna all'inizio"
+      >
+        ↑
+      </button>
+    </>
   )
 }
