@@ -36,10 +36,7 @@ if port_in_use "$BACKEND_PORT"; then
 fi
 
 if port_in_use "$FRONTEND_PORT"; then
-    warn "La porta $FRONTEND_PORT è già in uso. Vite sceglierà automaticamente un'altra porta."
-    VITE_AUTO_PORT=true
-else
-    VITE_AUTO_PORT=false
+    warn "La porta $FRONTEND_PORT è già in uso. Imposta FRONTEND_PORT=xxxx per usarne un'altra."
 fi
 
 # ── Node.js ─────────────────────────────────────────────────────────
@@ -128,13 +125,8 @@ uvicorn backend.main:app --reload --port "$BACKEND_PORT" &
 BACKEND_PID=$!
 
 # Frontend
-FRONTEND_ARGS=""
-if [ "$VITE_AUTO_PORT" = false ]; then
-    FRONTEND_ARGS="--port $FRONTEND_PORT"
-fi
-
-info "Avvio frontend..."
-(cd frontend && npm run dev -- $FRONTEND_ARGS) &
+info "Avvio frontend sulla porta $FRONTEND_PORT..."
+(cd frontend && npm run dev -- --port "$FRONTEND_PORT") &
 FRONTEND_PID=$!
 
 # ── Attesa e verifica ──────────────────────────────────────────────
