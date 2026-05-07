@@ -101,6 +101,12 @@ if [ -d "frontend" ]; then
     else
         ok "Dipendenze frontend già presenti"
     fi
+    # Pulizia cache Next.js per evitare errori MODULE_NOT_FOUND
+    # dopo cambiamenti di file strutturali (layout, componenti)
+    if [ -d "frontend/.next" ]; then
+        rm -rf frontend/.next
+        info "Cache Next.js pulita"
+    fi
 fi
 
 # ── Avvio ───────────────────────────────────────────────────────────
