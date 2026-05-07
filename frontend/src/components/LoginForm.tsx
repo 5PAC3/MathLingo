@@ -31,18 +31,47 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '4rem auto' }}>
-      <div className="card">
-        <h1 style={{ fontSize: '1.5rem', marginBottom: '1rem', textAlign: 'center' }}>
-          MathLingo
-        </h1>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '1.5rem', textAlign: 'center', color: 'var(--muted)' }}>
-          {mode === 'login' ? 'Accedi al tuo account' : 'Crea un nuovo account'}
-        </h2>
+    <div
+      style={{
+        maxWidth: 400,
+        margin: '0 auto',
+        padding: '3rem 1rem',
+      }}
+    >
+      <div className="card" style={{ padding: '2rem' }}>
+        <div className="text-center mb-2">
+          <h1
+            style={{
+              fontSize: '2rem',
+              fontWeight: 800,
+              letterSpacing: '-0.03em',
+            }}
+          >
+            MathLingo
+          </h1>
+          <p className="text-muted" style={{ marginTop: '0.25rem' }}>
+            {mode === 'login'
+              ? 'Accedi al tuo account'
+              : 'Crea un nuovo account'}
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-2"
+          style={{ marginTop: '1.5rem' }}
+        >
           {error && (
-            <div style={{ background: '#fee', color: 'var(--danger)', padding: '0.5rem 0.8rem', borderRadius: 'var(--radius)', fontSize: '0.9rem' }}>
+            <div
+              style={{
+                background: 'var(--danger-bg)',
+                color: 'var(--danger-fg)',
+                padding: '0.6rem 0.8rem',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+              }}
+            >
               {error}
             </div>
           )}
@@ -65,17 +94,44 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             minLength={4}
           />
 
-          <button type="submit" className="btn" disabled={busy} style={{ marginTop: '0.5rem' }}>
-            {busy ? '...' : mode === 'login' ? 'Entra' : 'Crea account'}
+          <button
+            type="submit"
+            className="btn"
+            disabled={busy}
+            style={{ marginTop: '0.5rem', width: '100%' }}
+          >
+            {busy
+              ? '...'
+              : mode === 'login'
+                ? 'Entra'
+                : 'Crea account'}
           </button>
         </form>
 
-        <p className="text-center" style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--muted)' }}>
-          {mode === 'login' ? 'Non hai un account? ' : 'Hai già un account? '}
+        <p
+          className="text-center"
+          style={{
+            marginTop: '1.25rem',
+            fontSize: '0.9rem',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {mode === 'login'
+            ? 'Non hai un account? '
+            : 'Hai già un account? '}
           <button
             type="button"
-            className="btn-outline btn-sm"
-            onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }}
+            className="btn-ghost btn-sm"
+            style={{
+              color: 'var(--primary)',
+              fontWeight: 600,
+              textDecoration: 'underline',
+              textUnderlineOffset: 2,
+            }}
+            onClick={() => {
+              setMode(mode === 'login' ? 'register' : 'login')
+              setError('')
+            }}
           >
             {mode === 'login' ? 'Registrati' : 'Accedi'}
           </button>

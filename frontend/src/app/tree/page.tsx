@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import SkillTree from '@/components/SkillTree'
+import Navbar from '@/components/Navbar'
 
 export default function TreePage() {
   const router = useRouter()
@@ -12,7 +13,16 @@ export default function TreePage() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  if (!mounted || loading) return <p className="container text-center text-muted">Caricamento...</p>
+  if (!mounted || loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="container">
+          <div className="spinner" />
+        </div>
+      </>
+    )
+  }
 
   if (!user) {
     router.push('/login')
@@ -20,20 +30,24 @@ export default function TreePage() {
   }
 
   return (
-    <div className="container">
-      <div className="flex items-center justify-between mb-2">
-        <h1 style={{ fontSize: '1.5rem' }}>Skill Tree</h1>
-        <div className="flex items-center gap-2">
-          <span className="text-muted" style={{ fontSize: '0.9rem' }}>{user.username}</span>
-          <button
-            className="btn btn-sm btn-outline"
-            onClick={() => router.push('/login')}
-          >
-            Esci
-          </button>
-        </div>
+    <>
+      <Navbar />
+      <div className="container">
+        <h1
+          style={{
+            fontSize: '1.3rem',
+            fontWeight: 800,
+            marginTop: '0.5rem',
+            marginBottom: '0.25rem',
+          }}
+        >
+          Skill Tree
+        </h1>
+        <p className="text-muted mb-2" style={{ fontSize: '0.9rem' }}>
+          Scegli un argomento per iniziare
+        </p>
+        <SkillTree onNodeClick={nodeId => router.push(`/node/${nodeId}`)} />
       </div>
-      <SkillTree onNodeClick={nodeId => router.push(`/node/${nodeId}`)} />
-    </div>
+    </>
   )
 }

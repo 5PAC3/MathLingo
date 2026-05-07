@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import NodeView from '@/components/NodeView'
+import Navbar from '@/components/Navbar'
 
 export default function NodePage() {
   const router = useRouter()
@@ -14,12 +15,26 @@ export default function NodePage() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  if (!mounted || loading) return <p className="container text-center text-muted">Caricamento...</p>
+  if (!mounted || loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="container">
+          <div className="spinner" />
+        </div>
+      </>
+    )
+  }
 
   if (!user) {
     router.push('/login')
     return null
   }
 
-  return <NodeView nodeId={params.id as string} onBack={() => router.push('/tree')} />
+  return (
+    <>
+      <Navbar />
+      <NodeView nodeId={params.id as string} onBack={() => router.push('/tree')} />
+    </>
+  )
 }

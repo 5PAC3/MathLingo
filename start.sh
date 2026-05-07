@@ -5,6 +5,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m'
 
 info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
@@ -17,7 +18,31 @@ cd "$(dirname "$0")"
 info "=== MathLingo — Avvio locale ==="
 echo ""
 
-# ── Node.js ─────────────────────────────────────────────────────
+# ── Porte ──────────────────────────────────────────────────────────
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
+
+port_in_use() {
+    if command -v ss &>/dev/null; then
+        ss -tlnp "sport = :$1" 2>/dev/null | grep -q . && return 0
+    elif command -v lsof &>/dev/null; then
+        lsof -i :"$1" &>/dev/null && return 0
+    fi
+    return 1
+}
+
+if port_in_use "$BACKEND_PORT"; then
+    fail "La porta $BACKEND_PORT è già in uso. Imposta BACKEND_PORT=xxxx per usarne un'altra."
+fi
+
+if port_in_use "$FRONTEND_PORT"; then
+    warn "La porta $FRONTEND_PORT è già in uso. Vite sceglierà automaticamente un'altra porta."
+    VITE_AUTO_PORT=true
+else
+    VITE_AUTO_PORT=false
+fi
+
+# ── Node.js ─────────────────────────────────────────────────────────
 info "Controllo Node.js..."
 if command -v node &>/dev/null; then
     NODE_VER=$(node --version)
@@ -33,7 +58,7 @@ else
     fail "npm non trovato"
 fi
 
-# ── Python ──────────────────────────────────────────────────────
+# ── Python ──────────────────────────────────────────────────────────
 info "Controllo Python..."
 PYTHON=""
 for cmd in python3 python; do
@@ -54,7 +79,7 @@ else
     fail "Python 3.10+ non trovato. Installa Python 3.10+ da https://python.org"
 fi
 
-# ── Backend dependencies ────────────────────────────────────────
+# ── Backend dependencies ────────────────────────────────────────────
 info "Controllo backend..."
 if [ ! -d "venv" ]; then
     info "Creazione ambiente virtuale..."
@@ -69,7 +94,7 @@ if [ -f "backend/requirements.txt" ]; then
     ok "Dipendenze Python installate"
 fi
 
-# ── Frontend dependencies ───────────────────────────────────────
+# ── Frontend dependencies ───────────────────────────────────────────
 info "Controllo frontend..."
 if [ -d "frontend" ]; then
     if [ ! -d "frontend/node_modules" ]; then
@@ -81,7 +106,7 @@ if [ -d "frontend" ]; then
     fi
 fi
 
-# ── Avvio ───────────────────────────────────────────────────────
+# ── Avvio ───────────────────────────────────────────────────────────
 echo ""
 info "Tutto pronto! Avvio backend e frontend..."
 echo ""
@@ -98,15 +123,41 @@ trap cleanup EXIT INT TERM
 
 # Backend
 source venv/bin/activate
-uvicorn backend.main:app --reload --port 8000 &
+info "Avvio backend sulla porta $BACKEND_PORT..."
+uvicorn backend.main:app --reload --port "$BACKEND_PORT" &
 BACKEND_PID=$!
-info "Backend:  http://localhost:8000"
 
 # Frontend
-(cd frontend && npm run dev) &
-FRONTEND_PID=$!
-info "Frontend: http://localhost:3000"
+FRONTEND_ARGS=""
+if [ "$VITE_AUTO_PORT" = false ]; then
+    FRONTEND_ARGS="--port $FRONTEND_PORT"
+fi
 
+info "Avvio frontend..."
+(cd frontend && npm run dev -- $FRONTEND_ARGS) &
+FRONTEND_PID=$!
+
+# ── Attesa e verifica ──────────────────────────────────────────────
+sleep 2
+
+if ! kill -0 $BACKEND_PID 2>/dev/null; then
+    fail "Il backend non si è avviato correttamente."
+fi
+
+if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+    fail "Il frontend non si è avviato correttamente."
+fi
+
+# ── Riepilogo finale ───────────────────────────────────────────────
+echo ""
+echo -e "  ${GREEN}╔═══════════════════════════════════════╗${NC}"
+echo -e "  ${GREEN}║        MathLingo — Avviato!           ║${NC}"
+echo -e "  ${GREEN}╠═══════════════════════════════════════╣${NC}"
+echo -e "  ${GREEN}║${NC}                                       ${GREEN}║${NC}"
+echo -e "  ${GREEN}║${NC}  ${BOLD}Backend${NC}  http://localhost:${BACKEND_PORT}     ${GREEN}║${NC}"
+echo -e "  ${GREEN}║${NC}  ${BOLD}Frontend${NC} http://localhost:${FRONTEND_PORT}     ${GREEN}║${NC}"
+echo -e "  ${GREEN}║${NC}                                       ${GREEN}║${NC}"
+echo -e "  ${GREEN}╚═══════════════════════════════════════╝${NC}"
 echo ""
 info "Premi Ctrl+C per fermare tutto."
 echo ""
