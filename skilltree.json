@@ -1,4 +1,47 @@
 {
-  "nodes": [],
-  "edges": []
+  "nodes": [
+    {
+      "id": "addizione",
+      "label": "Addizione",
+      "description": "Impara a sommare numeri interi",
+      "category": "aritmetica"
+    },
+    {
+      "id": "sottrazione",
+      "label": "Sottrazione",
+      "description": "Impara a sottrarre numeri interi",
+      "category": "aritmetica"
+    },
+    {
+      "id": "moltiplicazione",
+      "label": "Moltiplicazione",
+      "description": "Impara a moltiplicare numeri interi",
+      "category": "aritmetica"
+    },
+    {
+      "id": "divisione",
+      "label": "Divisione",
+      "description": "Impara a dividere numeri interi",
+      "category": "aritmetica"
+    },
+    {
+      "id": "equazioni-primo-grado",
+      "label": "Equazioni di 1° grado",
+      "description": "Risolvi equazioni lineari a un'incognita",
+      "category": "algebra"
+    },
+    {
+      "id": "algebra-booleana",
+      "label": "Algebra booleana",
+      "description": "Operazioni logiche AND, OR, NOT",
+      "category": "informatica"
+    }
+  ],
+  "edges": [
+    { "from": "addizione", "to": "sottrazione" },
+    { "from": "sottrazione", "to": "moltiplicazione" },
+    { "from": "moltiplicazione", "to": "divisione" },
+    { "from": "divisione", "to": "equazioni-primo-grado" },
+    { "from": "equazioni-primo-grado", "to": "algebra-booleana" }
+  ]
 }
