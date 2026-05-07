@@ -24,7 +24,7 @@ FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
 port_in_use() {
     if command -v ss &>/dev/null; then
-        ss -tlnp "sport = :$1" 2>/dev/null | grep -q . && return 0
+        ss -tlnp 2>/dev/null | grep -qP ":$1\b" && return 0
     elif command -v lsof &>/dev/null; then
         lsof -i :"$1" &>/dev/null && return 0
     fi
