@@ -1,0 +1,11 @@
+node_modules/
+.next/
+*.pyc
+__pycache__/
+mathlingo.db
+mathlingo.db-wal
+mathlingo.db-shm
+next-env.d.ts
+.env
+.env.local
+venv/
