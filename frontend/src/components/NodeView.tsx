@@ -1,8 +1,61 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { api, type SkillTreeData } from '@/lib/api'
 import ExerciseInput from './ExerciseInput'
+
+
+type Fragment =
+  | { t: 'text'; v: string }
+  | { t: 'bold'; v: string }
+  | { t: 'math'; v: string }
+
+function renderInline(text: string): ReactNode[] {
+  const fragments: Fragment[] = []
+  let s = text
+  while (s.length > 0) {
+    const bold = s.match(/^\*\*(.+?)\*\*/)
+    if (bold) { fragments.push({ t: 'bold', v: bold[1] }); s = s.slice(bold[0].length); continue }
+    const math = s.match(/^\$(.+?)\$/)
+    if (math) { fragments.push({ t: 'math', v: math[1] }); s = s.slice(math[0].length); continue }
+    const next = s.search(/\*\*|\$/)
+    if (next === -1) { fragments.push({ t: 'text', v: s }); break }
+    if (next > 0) { fragments.push({ t: 'text', v: s.slice(0, next) }); s = s.slice(next); continue }
+    fragments.push({ t: 'text', v: s[0] }); s = s.slice(1)
+  }
+  return fragments.map((f, i) => {
+    if (f.t === 'bold') return <strong key={i}>{f.v}</strong>
+    if (f.t === 'math') return <code key={i} style={{ background: 'var(--bg-alt)', padding: '0.1rem 0.3rem', borderRadius: '3px', fontSize: '0.95rem', color: 'var(--fg)' }}>{f.v}</code>
+    return f.v
+  })
+}
+
+function renderLine(line: string, i: number): ReactNode | null {
+  const trim = line.trim()
+  if (trim === '') return <br key={i} />
+
+  if (trim.startsWith('#')) {
+    const level = trim.match(/^#{1,3}/)?.[0].length || 1
+    const text = trim.replace(/^#+\s*/, '')
+    if (level === 1) return <h2 key={i} style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--fg)', marginTop: '1rem', marginBottom: '0.5rem' }}>{renderInline(text)}</h2>
+    if (level === 2) return <h3 key={i} style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--fg)', marginTop: '0.75rem', marginBottom: '0.35rem' }}>{renderInline(text)}</h3>
+    return <h4 key={i} style={{ fontWeight: 600, color: 'var(--fg)', marginTop: '0.5rem', marginBottom: '0.25rem' }}>{renderInline(text)}</h4>
+  }
+
+  if (line.startsWith('- ') || line.startsWith('* ')) {
+    return <li key={i} style={{ marginLeft: '1.2rem', marginBottom: '0.15rem' }}>{renderInline(line.slice(2))}</li>
+  }
+
+  if (trim.startsWith('$$') && trim.endsWith('$$')) {
+    return <code key={i} style={{ display: 'block', textAlign: 'center', padding: '0.5rem', background: 'var(--bg-alt)', borderRadius: 'var(--radius-sm)', margin: '0.5rem 0', fontSize: '1.05rem', color: 'var(--fg)' }}>{trim.slice(2, -2)}</code>
+  }
+
+  // skip table header/separator rows
+  if (line.includes('|') && line.includes('-') && line.includes('|')) return null
+  if (line.startsWith('|')) return <p key={i} style={{ marginBottom: '0.2rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>{line}</p>
+
+  return <p key={i} style={{ marginBottom: '0.35rem' }}>{renderInline(line)}</p>
+}
 
 interface NodeViewProps {
   nodeId: string
@@ -114,110 +167,7 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
                   wordBreak: 'break-word',
                 }}
               >
-                {theory.split('\n').map((line, i) => {
-                  if (line.startsWith('# '))
-                    return (
-                      <h2
-                        key={i}
-                        style={{
-                          fontSize: '1.15rem',
-                          fontWeight: 700,
-                          color: 'var(--fg)',
-                          marginTop: '1rem',
-                          marginBottom: '0.5rem',
-                        }}
-                      >
-                        {line.slice(2)}
-                      </h2>
-                    )
-                  if (line.startsWith('## '))
-                    return (
-                      <h3
-                        key={i}
-                        style={{
-                          fontSize: '1.05rem',
-                          fontWeight: 600,
-                          color: 'var(--fg)',
-                          marginTop: '0.75rem',
-                          marginBottom: '0.35rem',
-                        }}
-                      >
-                        {line.slice(3)}
-                      </h3>
-                    )
-                  if (line.startsWith('**') && line.endsWith('**'))
-                    return (
-                      <p
-                        key={i}
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--fg)',
-                          marginBottom: '0.25rem',
-                        }}
-                      >
-                        {line.slice(2, -2)}
-                      </p>
-                    )
-                  if (
-                    line.startsWith('- ') ||
-                    line.startsWith('* ')
-                  )
-                    return (
-                      <li
-                        key={i}
-                        style={{
-                          marginLeft: '1.2rem',
-                          marginBottom: '0.15rem',
-                        }}
-                      >
-                        {line.slice(2)}
-                      </li>
-                    )
-                  if (line.startsWith('$$') && line.endsWith('$$'))
-                    return (
-                      <code
-                        key={i}
-                        style={{
-                          display: 'block',
-                          textAlign: 'center',
-                          padding: '0.5rem',
-                          background: 'var(--bg-alt)',
-                          borderRadius: 'var(--radius-sm)',
-                          margin: '0.5rem 0',
-                          fontSize: '1.05rem',
-                          color: 'var(--fg)',
-                        }}
-                      >
-                        {line.slice(2, -2)}
-                      </code>
-                    )
-                  if (line.startsWith('$') && line.endsWith('$'))
-                    return (
-                      <code
-                        key={i}
-                        style={{
-                          background: 'var(--bg-alt)',
-                          padding: '0.1rem 0.3rem',
-                          borderRadius: '3px',
-                          fontSize: '0.95rem',
-                          color: 'var(--fg)',
-                        }}
-                      >
-                        {line.slice(1, -1)}
-                      </code>
-                    )
-                  if (line.trim() === '') return <br key={i} />
-                  // Detect table rows (simple pipe tables)
-                  if (line.includes('|') && line.includes('-') && line.includes('|'))
-                    return null
-                  if (line.startsWith('|'))
-                    return <p key={i} style={{ marginBottom: '0.2rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>{line}</p>
-                  return (
-                    <p key={i} style={{ marginBottom: '0.35rem' }}>
-                      {line}
-                    </p>
-                  )
-                })}
+                {theory.split('\n').map((line, i) => renderLine(line, i))}
               </div>
             ) : theoryError ? (
               <p className="text-muted">
