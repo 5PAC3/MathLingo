@@ -11,3 +11,4 @@ next-env.d.ts
 venv/
 frontend/out/
 *.tsbuildinfo
+crashreport.txt
