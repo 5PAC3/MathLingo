@@ -20,6 +20,8 @@ export default function PlacementTest() {
   const [error, setError] = useState('')
   const [stats, setStats] = useState({ correct: 0, total: 0 })
   const [finishStats, setFinishStats] = useState<PlacementFinishResponse['stats'] | null>(null)
+  const [finishError, setFinishError] = useState(false)
+  const finishingRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function PlacementTest() {
       setError(err instanceof Error ? err.message : 'Errore')
       setPhase('done')
     })
-  }, [router])
+  }, [])
 
   useEffect(() => {
     if (phase === 'answering') {
@@ -66,16 +68,7 @@ export default function PlacementTest() {
         setAnswer('')
         if (isLast) {
           setPhase('finishing')
-          api.post<PlacementFinishResponse>('/placement/finish', {
-            placement_id: placementId,
-          }).then(finishRes => {
-            setFinishStats(finishRes.stats)
-            localStorage.setItem('placement_done', 'true')
-            refreshPlacement()
-            setPhase('done')
-          }).catch(() => {
-            setPhase('done')
-          })
+          finishPlacement()
         } else {
           setCurrentIdx(i => i + 1)
         }
@@ -87,6 +80,23 @@ export default function PlacementTest() {
       setBusy(false)
     }
   }
+
+  const finishPlacement = useCallback(() => {
+    if (finishingRef.current) return
+    finishingRef.current = true
+    setFinishError(false)
+    api.post<PlacementFinishResponse>('/placement/finish', {
+      placement_id: placementId,
+    }).then(finishRes => {
+      setFinishStats(finishRes.stats)
+      refreshPlacement()
+      setPhase('done')
+    }).catch(() => {
+      finishingRef.current = false
+      setFinishError(true)
+      setPhase('done')
+    })
+  }, [placementId, refreshPlacement])
 
   const goToTree = useCallback(() => {
     router.push('/tree')
@@ -138,15 +148,29 @@ export default function PlacementTest() {
                 Puoi iniziare da dove preferisci.
               </p>
             </>
+          ) : finishError ? (
+            <div>
+              <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>Errore durante il salvataggio del test.</p>
+              <div className="flex gap-2" style={{ gap: '0.5rem' }}>
+                <button className="btn" onClick={finishPlacement} style={{ padding: '0.75rem 1.5rem' }}>
+                  Riprova
+                </button>
+                <button className="btn btn-outline" onClick={goToTree} style={{ padding: '0.75rem 1.5rem' }}>
+                  Salta
+                </button>
+              </div>
+            </div>
           ) : error ? (
             <div>
               <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</p>
             </div>
           ) : null}
 
-          <button className="btn" onClick={goToTree} style={{ fontSize: '1rem', padding: '0.75rem 2rem' }}>
-            Vai allo Skill Tree →
-          </button>
+          {!finishError && (
+            <button className="btn" onClick={goToTree} style={{ fontSize: '1rem', padding: '0.75rem 2rem' }}>
+              Vai allo Skill Tree →
+            </button>
+          )}
         </div>
       </div>
     )

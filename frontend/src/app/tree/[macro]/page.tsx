@@ -11,7 +11,7 @@ export default function MacroPage() {
   const router = useRouter()
   const params = useParams()
   const macro = params.macro as string
-  const { user, loading } = useAuth()
+  const { user, placement_done, loading } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [tree, setTree] = useState<SkillTreeData | null>(null)
   const [progress, setProgress] = useState<ProgressData>({})
@@ -31,6 +31,10 @@ export default function MacroPage() {
   useEffect(() => {
     if (mounted && !loading && !user) router.push('/login')
   }, [mounted, loading, user, router])
+
+  useEffect(() => {
+    if (mounted && !loading && user && !placement_done) router.push('/placement')
+  }, [mounted, loading, user, placement_done, router])
 
   const macroInfo = tree?.macros?.find(m => m.id === macro)
 
