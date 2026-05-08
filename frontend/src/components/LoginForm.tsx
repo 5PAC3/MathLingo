@@ -141,7 +141,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             type="submit"
             className="btn"
             disabled={busy}
-            style={{ marginTop: '0.5rem', width: '100%' }}
+            style={{ marginTop: '0.5rem', width: '100%', fontFamily: 'var(--font-mono)' }}
           >
             {busy ? 'Caricamento...' : submitLabel}
           </button>

@@ -17,16 +17,16 @@ interface NodeLayout {
   completed: boolean
 }
 
-function categoryColor(cat: string): string {
-  const colors: Record<string, string> = {
-    aritmetica: '#4361ee',
-    algebra: '#e71d36',
-    informatica: '#2ec4b6',
+function getCategoryColor(cat: string): string {
+  const vars: Record<string, string> = {
+    aritmetica: 'var(--cat-aritmetica)',
+    algebra: 'var(--cat-algebra)',
+    informatica: 'var(--cat-informatica)',
   }
-  return colors[cat] || '#6c757d'
+  return vars[cat] || 'var(--fg-muted)'
 }
 
-function categoryLabel(cat: string): string {
+function getCategoryLabel(cat: string): string {
   const labels: Record<string, string> = {
     aritmetica: 'Aritmetica',
     algebra: 'Algebra',
@@ -39,12 +39,12 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
   levels: NodeLayout[][]
   edges: SkillEdge[]
 } {
-  const levelsMap = new Map<string, number>()
+  const levelMap = new Map<string, number>()
   const inDegree = new Map<string, number>()
   const adj = new Map<string, string[]>()
 
   for (const n of tree.nodes) {
-    levelsMap.set(n.id, 0)
+    levelMap.set(n.id, 0)
     inDegree.set(n.id, 0)
     adj.set(n.id, [])
   }
@@ -60,7 +60,7 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
   while (queue.length > 0) {
     const id = queue.shift()!
     for (const next of adj.get(id) || []) {
-      levelsMap.set(next, Math.max(levelsMap.get(next)!, levelsMap.get(id)! + 1))
+      levelMap.set(next, Math.max(levelMap.get(next)!, levelMap.get(id)! + 1))
       const d = inDegree.get(next)!
       inDegree.set(next, d - 1)
       if (d - 1 === 0) queue.push(next)
@@ -69,7 +69,7 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
 
   const byLevel = new Map<number, NodeLayout[]>()
   for (const n of tree.nodes) {
-    const l = levelsMap.get(n.id) || 0
+    const l = levelMap.get(n.id) || 0
     const p = progress[n.id]
     const completed = p
       ? Object.values(p).every((v: { completed: boolean }) => v.completed)
@@ -86,50 +86,12 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
   }
 }
 
-function ArrowIcon() {
+function ConnectorArrow() {
   return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--fg-muted)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ display: 'block' }}
-    >
-      <line x1="12" y1="4" x2="12" y2="18" />
-      <polyline points="6,12 12,18 18,12" />
-    </svg>
+    <div className="connector-arrow" aria-hidden="true">
+      │<br />▼
+    </div>
   )
-}
-
-function skillNodeClass(completed: boolean): string {
-  return `skill-node ${completed ? 'skill-node--completed' : ''}`
-}
-
-function nodeStyle(color: string, completed: boolean): CSSProperties {
-  return {
-    flex: '1 1 200px',
-    maxWidth: 280,
-    minWidth: 160,
-    padding: '1rem 1.25rem',
-    border: 'none',
-    borderLeft: `4px solid ${color}`,
-    background: completed
-      ? `linear-gradient(135deg, ${color}22, transparent)`
-      : 'var(--card-bg)',
-    boxShadow: completed
-      ? `${color}33 0 0 0 1px inset, var(--shadow)`
-      : 'var(--shadow)',
-    cursor: 'pointer',
-    textAlign: 'left',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.25rem',
-  }
 }
 
 export default function SkillTree({ onNodeClick }: SkillTreeProps) {
@@ -233,32 +195,40 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
             className="flex flex-wrap justify-center gap-2"
             style={{ width: '100%' }}
           >
-            {nodes.map((node, nodeIdx) => {
-              const color = categoryColor(node.category)
+            {nodes.map((node) => {
+              const color = getCategoryColor(node.category)
               const idx = globalIdx++
               return (
                 <button
                   key={node.id}
                   ref={el => { nodeRefs.current[idx] = el }}
                   role="treeitem"
-                  aria-label={`${node.label} — ${categoryLabel(node.category)}${node.completed ? ' — Completato' : ''}`}
+                  aria-label={`${node.label} — ${getCategoryLabel(node.category)}${node.completed ? ' — Completato' : ''}`}
                   aria-setsize={nodes.length}
-                  aria-posinset={nodeIdx + 1}
+                  aria-posinset={idx + 1}
                   tabIndex={idx === focusIdx ? 0 : -1}
                   onClick={() => onNodeClick(node.id)}
                   title={node.description}
-                  className={skillNodeClass(node.completed)}
-                  style={nodeStyle(color, node.completed)}
+                  className={`card skill-node ${node.completed ? 'skill-node-completed' : ''}`}
+                  style={{
+                    flex: '1 1 200px',
+                    maxWidth: 280,
+                    minWidth: 160,
+                    borderLeft: node.completed ? `4px solid ${color}` : undefined,
+                  }}
                 >
-                  <div
-                    className="flex items-center justify-between"
-                    style={{ gap: '0.5rem' }}
-                  >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="skill-node-dot"
+                      style={{ background: color }}
+                    />
                     <span
                       style={{
-                        fontWeight: 700,
-                        fontSize: '0.95rem',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
                         color: 'var(--fg)',
+                        lineHeight: 1.3,
                       }}
                     >
                       {node.label}
@@ -266,9 +236,14 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
                     {node.completed && (
                       <span
                         aria-label="Completato"
-                        style={{ color, fontSize: '1.1rem' }}
+                        style={{
+                          color,
+                          fontSize: '0.8rem',
+                          marginLeft: 'auto',
+                          flexShrink: 0,
+                        }}
                       >
-                        ✓
+                        ◆
                       </span>
                     )}
                   </div>
@@ -280,26 +255,14 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
                       alignSelf: 'flex-start',
                     }}
                   >
-                    {categoryLabel(node.category)}
+                    {getCategoryLabel(node.category)}
                   </span>
                 </button>
               )
             })}
           </div>
 
-          {levelIdx < layout.levels.length - 1 && (
-            <div
-              className="flex justify-center"
-              style={{
-                padding: '0.75rem 0',
-                color: 'var(--fg-muted)',
-                opacity: 0.5,
-              }}
-              aria-hidden="true"
-            >
-              <ArrowIcon />
-            </div>
-          )}
+          {levelIdx < layout.levels.length - 1 && <ConnectorArrow />}
         </div>
       ))}
     </div>

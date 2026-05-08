@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
+import katex from 'katex'
 import { api, type SkillTreeData } from '@/lib/api'
 import ExerciseInput from './ExerciseInput'
 
@@ -73,6 +74,20 @@ function latexToText(math: string): string {
   return s
 }
 
+function renderMath(expr: string, displayMode: boolean): { __html: string } {
+  try {
+    return {
+      __html: katex.renderToString(expr, {
+        displayMode,
+        throwOnError: false,
+        output: 'html',
+      }),
+    }
+  } catch {
+    return { __html: latexToText(expr) }
+  }
+}
+
 function renderInline(text: string): ReactNode[] {
   const fragments: Fragment[] = []
   let s = text
@@ -80,7 +95,7 @@ function renderInline(text: string): ReactNode[] {
     const bold = s.match(/^\*\*(.+?)\*\*/)
     if (bold) { fragments.push({ t: 'bold', v: bold[1] }); s = s.slice(bold[0].length); continue }
     const math = s.match(/^\$(.+?)\$/)
-    if (math) { fragments.push({ t: 'math', v: latexToText(math[1]) }); s = s.slice(math[0].length); continue }
+    if (math) { fragments.push({ t: 'math', v: math[1] }); s = s.slice(math[0].length); continue }
     const next = s.search(/\*\*|\$/)
     if (next === -1) { fragments.push({ t: 'text', v: s }); break }
     if (next > 0) { fragments.push({ t: 'text', v: s.slice(0, next) }); s = s.slice(next); continue }
@@ -88,7 +103,7 @@ function renderInline(text: string): ReactNode[] {
   }
   return fragments.map((f, i) => {
     if (f.t === 'bold') return <strong key={i}>{f.v}</strong>
-    if (f.t === 'math') return <code key={i} style={{ background: 'var(--bg-alt)', padding: '0.1rem 0.35rem', borderRadius: 'var(--radius-sm)', fontSize: '0.95rem', color: 'var(--fg)' }}>{f.v}</code>
+    if (f.t === 'math') return <span key={i} dangerouslySetInnerHTML={renderMath(f.v, false)} />
     return f.v
   })
 }
@@ -100,9 +115,9 @@ function renderLine(line: string, i: number): ReactNode | null {
   if (trim.startsWith('#')) {
     const level = trim.match(/^#{1,3}/)?.[0].length || 1
     const text = trim.replace(/^#+\s*/, '')
-    if (level === 1) return <h2 key={i} style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--fg)', marginTop: '1rem', marginBottom: '0.5rem' }}>{renderInline(text)}</h2>
-    if (level === 2) return <h3 key={i} style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--fg)', marginTop: '0.75rem', marginBottom: '0.35rem' }}>{renderInline(text)}</h3>
-    return <h4 key={i} style={{ fontWeight: 600, color: 'var(--fg)', marginTop: '0.5rem', marginBottom: '0.25rem' }}>{renderInline(text)}</h4>
+    if (level === 1) return <h2 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--fg)', marginTop: '1rem', marginBottom: '0.5rem' }}>{renderInline(text)}</h2>
+    if (level === 2) return <h3 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 600, color: 'var(--fg)', marginTop: '0.75rem', marginBottom: '0.35rem' }}>{renderInline(text)}</h3>
+    return <h4 key={i} style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--fg)', marginTop: '0.5rem', marginBottom: '0.25rem' }}>{renderInline(text)}</h4>
   }
 
   if (line.startsWith('- ') || line.startsWith('* ')) {
@@ -110,12 +125,22 @@ function renderLine(line: string, i: number): ReactNode | null {
   }
 
   if (trim.startsWith('$$') && trim.endsWith('$$')) {
-    return <code key={i} style={{ display: 'block', textAlign: 'center', padding: '0.5rem', background: 'var(--bg-alt)', borderRadius: 'var(--radius-sm)', margin: '0.5rem 0', fontSize: '1.05rem', color: 'var(--fg)' }}>{latexToText(trim.slice(2, -2))}</code>
+    const math = trim.slice(2, -2)
+    return (
+      <div
+        key={i}
+        style={{
+          textAlign: 'center',
+          padding: '0.6rem 0',
+          margin: '0.5rem 0',
+        }}
+        dangerouslySetInnerHTML={renderMath(math, true)}
+      />
+    )
   }
 
-  // skip table header/separator rows
   if (line.includes('|') && line.includes('-') && line.includes('|')) return null
-  if (line.startsWith('|')) return <p key={i} style={{ marginBottom: '0.2rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>{line}</p>
+  if (line.startsWith('|')) return <p key={i} style={{ marginBottom: '0.2rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{line}</p>
 
   return <p key={i} style={{ marginBottom: '0.35rem' }}>{renderInline(line)}</p>
 }
@@ -132,12 +157,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 function categoryColor(cat: string): string {
-  const colors: Record<string, string> = {
-    aritmetica: '#4361ee',
-    algebra: '#e71d36',
-    informatica: '#2ec4b6',
+  const vars: Record<string, string> = {
+    aritmetica: 'var(--cat-aritmetica)',
+    algebra: 'var(--cat-algebra)',
+    informatica: 'var(--cat-informatica)',
   }
-  return colors[cat] || '#6c757d'
+  return vars[cat] || 'var(--primary)'
 }
 
 export default function NodeView({ nodeId, onBack }: NodeViewProps) {
@@ -192,114 +217,143 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
       <div className="container" style={{ paddingTop: '0.5rem' }}>
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <Link href="/tree">Skill Tree</Link>
-          <span aria-hidden="true">›</span>
+          <span aria-hidden="true">/</span>
           <span aria-current="page">{nodeLabel}</span>
         </nav>
 
         {nodeInfo && (
-          <div className="card mb-2" style={{ borderLeft: `4px solid ${color}` }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                marginBottom: '0.35rem',
-                flexWrap: 'wrap',
-              }}
-            >
-              <h1 ref={headingRef} tabIndex={-1} style={{ fontSize: '1.4rem' }}>{nodeInfo.label}</h1>
-              <span
-                className="badge"
+          <div
+            className="card mb-2"
+            style={{
+              borderLeft: `4px solid ${color}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <div
                 style={{
-                  background: `${color}18`,
-                  color,
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  background: color,
+                  flexShrink: 0,
+                }}
+              />
+              <h1
+                ref={headingRef}
+                tabIndex={-1}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '1.3rem',
+                  fontWeight: 700,
                 }}
               >
-                {CATEGORY_LABELS[nodeInfo.category] || nodeInfo.category}
-              </span>
+                {nodeInfo.label}
+              </h1>
             </div>
-            <p className="text-muted" style={{ fontSize: '0.95rem' }}>
+            <span
+              className="badge"
+              style={{
+                background: `${color}18`,
+                color,
+              }}
+            >
+              {CATEGORY_LABELS[nodeInfo.category] || nodeInfo.category}
+            </span>
+            <p className="text-muted w-full" style={{ fontSize: '0.9rem', marginTop: '-0.25rem' }}>
               {nodeInfo.description}
             </p>
           </div>
         )}
 
-      <div className="card mb-2">
-        <button
-          className="btn btn-sm btn-ghost"
-          onClick={() => setShowTheory(!showTheory)}
-          aria-expanded={showTheory}
-          aria-controls="theory-content"
-          style={{
-            marginBottom: showTheory && theory ? '0.75rem' : 0,
-            fontSize: '0.9rem',
-            color: 'var(--fg)',
-            fontWeight: 600,
-          }}
-        >
-          <span
+        <div className="card mb-2 double-border">
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => setShowTheory(!showTheory)}
+            aria-expanded={showTheory}
+            aria-controls="theory-content"
             style={{
-              display: 'inline-block',
-              transition: 'transform 0.2s ease',
-              transform: showTheory ? 'rotate(90deg)' : 'rotate(0deg)',
+              marginBottom: showTheory && theory ? '0.75rem' : 0,
+              fontSize: '0.85rem',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 600,
+              color: 'var(--fg)',
             }}
           >
-            ▶
-          </span>{' '}
-          Teoria
-        </button>
-        <div
-          id="theory-content"
-          style={{
-            display: showTheory ? 'block' : 'none',
-            lineHeight: 1.8,
-            color: 'var(--fg-muted)',
-            fontSize: '0.94rem',
-          }}
-        >
-          {theory ? (
-            <div
+            <span
               style={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
+                display: 'inline-block',
+                transition: 'transform 0.2s ease',
+                transform: showTheory ? 'rotate(90deg)' : 'rotate(0deg)',
               }}
             >
-              {theory.split('\n').map((line, i) => renderLine(line, i))}
-            </div>
-          ) : theoryError ? (
-            <p className="text-muted">
-              Teoria non disponibile per questo nodo.
-            </p>
-          ) : (
-            <div className="spinner" />
-          )}
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="flex items-center justify-between mb-2" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h2 style={{ fontSize: '1.1rem' }}>Esercizi</h2>
-          <div className="flex gap-1" role="tablist" aria-label="Livello di difficoltà">
-            {[1, 2, 3].map(l => (
-              <button
-                key={l}
-                role="tab"
-                aria-selected={level === l}
-                className={`btn btn-sm ${level === l ? 'btn' : 'btn-outline'}`}
-                onClick={() => setLevel(l)}
+              ▸
+            </span>{' '}
+            Teoria
+          </button>
+          <div
+            id="theory-content"
+            style={{
+              display: showTheory ? 'block' : 'none',
+              lineHeight: 1.8,
+              color: 'var(--fg-muted)',
+              fontSize: '0.92rem',
+            }}
+          >
+            {theory ? (
+              <div
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
               >
-                Liv. {l}
-              </button>
-            ))}
+                {theory.split('\n').map((line, i) => renderLine(line, i))}
+              </div>
+            ) : theoryError ? (
+              <p className="text-muted">
+                Teoria non disponibile per questo nodo.
+              </p>
+            ) : (
+              <div className="spinner" />
+            )}
           </div>
         </div>
-        <ExerciseInput
-          key={`${nodeId}-${level}`}
-          nodeId={nodeId}
-          level={level}
-        />
+
+        <div className="card">
+          <div className="flex items-center justify-between mb-2" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '1rem',
+                fontWeight: 700,
+              }}
+            >
+              Esercizi
+            </h2>
+            <div className="flex gap-1" role="tablist" aria-label="Livello di difficoltà">
+              {[1, 2, 3].map(l => (
+                <button
+                  key={l}
+                  role="tab"
+                  aria-selected={level === l}
+                  className={`btn btn-sm ${level === l ? 'btn' : 'btn-outline'}`}
+                  onClick={() => setLevel(l)}
+                >
+                  Liv. {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <ExerciseInput
+            key={`${nodeId}-${level}`}
+            nodeId={nodeId}
+            level={level}
+          />
+        </div>
       </div>
-    </div>
 
       <button
         className={`back-to-top ${showBackToTop ? 'visible' : ''}`}

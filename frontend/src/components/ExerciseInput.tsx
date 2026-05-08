@@ -18,7 +18,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
   const [stats, setStats] = useState({ correct: 0, total: 0 })
   const [focusTarget, setFocusTarget] = useState<'input' | 'result' | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const resultRef = useRef<HTMLDivElement>(null)
+  const prevResultRef = useRef<ValidationResult | null>(null)
 
   const saveProgress = useCallback(
     async (score: number) => {
@@ -95,9 +95,16 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
 
   useEffect(() => {
     if (focusTarget === 'input') inputRef.current?.focus()
-    else if (focusTarget === 'result') resultRef.current?.focus()
+    else if (focusTarget === 'result') {
+      const el = document.getElementById('exercise-result')
+      el?.focus()
+    }
     setFocusTarget(null)
   }, [focusTarget])
+
+  useEffect(() => {
+    prevResultRef.current = result
+  }, [result])
 
   return (
     <div>
@@ -118,7 +125,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
           >
             <p
               style={{
-                fontSize: '1.1rem',
+                fontSize: '1.05rem',
                 fontWeight: 600,
                 lineHeight: 1.4,
                 overflowWrap: 'break-word',
@@ -150,18 +157,20 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
             <label htmlFor="exercise-answer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
               La tua risposta
             </label>
-            <input
-              id="exercise-answer"
-              ref={inputRef}
-              value={answer}
-              onChange={e => setAnswer(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="La tua risposta..."
-              disabled={!!result || busy}
-              autoComplete="off"
-              spellCheck={false}
-              style={{ flex: 1 }}
-            />
+            <div className="terminal-input-wrapper">
+              <span className="terminal-prompt" aria-hidden="true">$</span>
+              <input
+                id="exercise-answer"
+                ref={inputRef}
+                value={answer}
+                onChange={e => setAnswer(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="x = ..."
+                disabled={!!result || busy}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
             <button
               type="submit"
               className="btn"
@@ -174,15 +183,16 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
 
           <div
             style={{
-              marginTop: '0.3rem',
-              fontSize: '0.75rem',
+              marginTop: '0.25rem',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.7rem',
               color: 'var(--fg-muted)',
-              opacity: 0.6,
+              opacity: 0.4,
               userSelect: 'none',
             }}
             aria-hidden="true"
           >
-            Ctrl+Enter per inviare
+            ^Enter
           </div>
 
           <style>{`
@@ -190,7 +200,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               .exercise-form {
                 flex-direction: column;
               }
-              .exercise-form input {
+              .exercise-form .terminal-input-wrapper {
                 width: 100%;
               }
               .exercise-form button {
@@ -204,7 +214,8 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               style={{
                 color: 'var(--danger)',
                 marginTop: '0.5rem',
-                fontSize: '0.9rem',
+                fontSize: '0.85rem',
+                fontFamily: 'var(--font-mono)',
               }}
             >
               {error}
@@ -213,26 +224,17 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
 
           {result && (
             <div
-              ref={resultRef}
+              id="exercise-result"
               tabIndex={-1}
               role="status"
               aria-live="polite"
-              style={{
-                marginTop: '1rem',
-                padding: '0.8rem 1rem',
-                borderRadius: 'var(--radius-sm)',
-                background: result.correct ? 'var(--success-bg)' : 'var(--danger-bg)',
-                color: result.correct ? 'var(--success-fg)' : 'var(--danger-fg)',
-                animation: 'fadeIn 0.2s ease',
-                outline: 'none',
-              }}
+              className={result.correct ? 'pass' : 'fail'}
+              style={{ outline: 'none' }}
             >
-              <p style={{ fontWeight: 700 }}>
-                {result.correct ? '✓ Corretto!' : '✗ Non corretto'}
-              </p>
+              <p>{result.correct ? 'PASS' : 'FAIL'}</p>
               {!result.correct && (
-                <p style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                  Risposta corretta: <strong>{result.expected}</strong>
+                <p className="fail-detail">
+                  expected: <strong>{result.expected}</strong>
                 </p>
               )}
             </div>
@@ -249,33 +251,25 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               aria-label={`Progresso: ${stats.correct} corretti su ${stats.total} totali`}
             >
               <div
-                style={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 3,
-                  background: 'var(--bg-alt)',
-                  overflow: 'hidden',
-                }}
+                className="progress-bar-bg"
                 role="progressbar"
                 aria-valuenow={Math.round((stats.correct / stats.total) * 100)}
                 aria-valuemin={0}
                 aria-valuemax={100}
               >
                 <div
+                  className="progress-bar-fill"
                   style={{
                     width: `${(stats.correct / stats.total) * 100}%`,
-                    height: '100%',
-                    borderRadius: 3,
-                    background: 'var(--success)',
-                    transition: 'width 0.3s ease',
                   }}
                 />
               </div>
               <span
-                className="text-muted"
                 style={{
-                  fontSize: '0.8rem',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.75rem',
                   fontWeight: 600,
+                  color: 'var(--fg-muted)',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -287,30 +281,23 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
           {exercise.hints.length > 0 && (
             <div style={{ marginTop: '0.75rem' }}>
               <button
-                className="btn btn-sm btn-ghost"
+                className="hint-toggle"
                 onClick={() => setShowHints(!showHints)}
                 aria-expanded={showHints}
                 aria-controls="hints-list"
-                style={{
-                  color: 'var(--fg-muted)',
-                  fontSize: '0.85rem',
-                }}
               >
-                {showHints ? 'Nascondi' : 'Mostra'} suggerimenti
+                {showHints ? '// nascondi suggerimenti' : `// mostra suggerimenti (${exercise.hints.length})`}
               </button>
               {showHints && (
                 <ul
                   id="hints-list"
                   style={{
-                    marginTop: '0.5rem',
-                    paddingLeft: '1.2rem',
-                    fontSize: '0.88rem',
-                    color: 'var(--fg-muted)',
-                    lineHeight: 1.7,
+                    marginTop: '0.4rem',
+                    paddingLeft: 0,
                   }}
                 >
                   {exercise.hints.map((hint, i) => (
-                    <li key={i}>{hint}</li>
+                    <li key={i} className="hint-item">{hint}</li>
                   ))}
                 </ul>
               )}
