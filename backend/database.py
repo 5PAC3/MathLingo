@@ -1,8 +1,9 @@
+import os
 import sqlite3
 import threading
 from pathlib import Path
 
-_DB_PATH = Path(__file__).parent / "mathlingo.db"
+_DB_PATH = Path(os.environ.get("DATABASE_PATH", Path(__file__).parent / "mathlingo.db"))
 _lock = threading.Lock()
 
 
