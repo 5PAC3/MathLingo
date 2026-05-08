@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 sympy
-python-jose[cryptography]
+PyJWT
 passlib[bcrypt]
 bcrypt
 aiofiles
