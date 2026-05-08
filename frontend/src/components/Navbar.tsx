@@ -1,11 +1,14 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useTheme } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const { user, logout } = useAuth()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   return (
     <nav aria-label="Navigazione principale">
@@ -50,14 +53,16 @@ export default function Navbar() {
               </>
             )}
 
-            <button
-              className="btn btn-sm btn-ghost"
-              onClick={toggleTheme}
-              aria-label={theme === 'light' ? 'Passa a tema scuro' : 'Passa a tema chiaro'}
-              style={{ fontSize: '1.05rem', lineHeight: 1 }}
-            >
-              {theme === 'light' ? '◐' : '☀'}
-            </button>
+            {mounted && (
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={toggleTheme}
+                aria-label={theme === 'light' ? 'Passa a tema scuro' : 'Passa a tema chiaro'}
+                style={{ fontSize: '1.05rem', lineHeight: 1 }}
+              >
+                {theme === 'light' ? '◐' : '☀'}
+              </button>
+            )}
           </div>
         </div>
       </div>

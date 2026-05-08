@@ -3,21 +3,34 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import SkillTree from '@/components/SkillTree'
+import { api, type SkillTreeData, type ProgressData } from '@/lib/api'
+import MacroTree from '@/components/MacroTree'
 import Navbar from '@/components/Navbar'
 
 export default function TreePage() {
   const router = useRouter()
   const { user, loading } = useAuth()
   const [mounted, setMounted] = useState(false)
+  const [tree, setTree] = useState<SkillTreeData | null>(null)
+  const [progress, setProgress] = useState<ProgressData>({})
 
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    api.get<SkillTreeData>('/skilltree').then(setTree)
+  }, [])
+
+  useEffect(() => {
+    if (tree && user) {
+      api.get<ProgressData>('/progress').then(setProgress).catch(() => {})
+    }
+  }, [tree, user])
 
   useEffect(() => {
     if (mounted && !loading && !user) router.push('/login')
   }, [mounted, loading, user, router])
 
-  if (!mounted || loading || !user) {
+  if (!mounted || loading || !user || !tree) {
     return (
       <>
         <Navbar />
@@ -40,12 +53,17 @@ export default function TreePage() {
             marginBottom: '0.25rem',
           }}
         >
-          Skill Tree
+          Panoramica
         </h1>
         <p className="text-muted mb-2" style={{ fontSize: '0.9rem' }}>
-          Scegli un argomento per iniziare
+          Scegli un macro-argomento per iniziare
         </p>
-        <SkillTree onNodeClick={nodeId => router.push(`/node/${nodeId}`)} />
+        <MacroTree
+          macros={tree?.macros ?? []}
+          nodes={tree?.nodes ?? []}
+          progress={progress}
+          onMacroClick={macroId => router.push(`/tree/${macroId}`)}
+        />
       </div>
     </>
   )

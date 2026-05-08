@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import katex from 'katex'
 import { api, type SkillTreeData } from '@/lib/api'
 import { useHotkeys } from '@/lib/hotkeys'
@@ -154,7 +155,9 @@ interface NodeViewProps {
 const CATEGORY_LABELS: Record<string, string> = {
   aritmetica: 'Aritmetica',
   algebra: 'Algebra',
-  informatica: 'Informatica',
+    informatica: 'Informatica',
+    geometria: 'Geometria',
+    probabilita: 'Probabilit\u00e0',
 }
 
 function categoryColor(cat: string): string {
@@ -162,11 +165,14 @@ function categoryColor(cat: string): string {
     aritmetica: 'var(--cat-aritmetica)',
     algebra: 'var(--cat-algebra)',
     informatica: 'var(--cat-informatica)',
+    geometria: 'var(--cat-geometria)',
+    probabilita: 'var(--cat-probabilita)',
   }
   return vars[cat] || 'var(--primary)'
 }
 
 export default function NodeView({ nodeId, onBack }: NodeViewProps) {
+  const router = useRouter()
   const [tree, setTree] = useState<SkillTreeData | null>(null)
   const [theory, setTheory] = useState<string | null>(null)
   const [theoryError, setTheoryError] = useState(false)
@@ -189,8 +195,19 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
       })
   }, [nodeId])
 
+  const nodeInfo = tree?.nodes.find(n => n.id === nodeId)
+  const category = nodeInfo?.category
+
+  const handleBack = useCallback(() => {
+    if (category) {
+      router.push(`/tree/${category}`)
+    } else {
+      onBack()
+    }
+  }, [category, router, onBack])
+
   useHotkeys({
-    'Escape': onBack,
+    'Escape': handleBack,
     'e': () => { if (view === 'theory' && !theoryError) setView('exercise') },
     't': () => { if (view === 'exercise') setView('theory') },
     '1': () => { if (view === 'exercise') setLevel(1) },
@@ -208,7 +225,6 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const nodeInfo = tree?.nodes.find(n => n.id === nodeId)
   const color = nodeInfo ? categoryColor(nodeInfo.category) : 'var(--primary)'
   const nodeLabel = nodeInfo?.label || nodeId
 
@@ -216,8 +232,16 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
     <>
       <div className="container" style={{ paddingTop: '0.5rem' }}>
         <nav aria-label="Breadcrumb" className="breadcrumb">
-          <Link href="/tree">Skill Tree</Link>
+          <Link href="/tree">Panoramica</Link>
           <span aria-hidden="true">/</span>
+          {category && (
+            <>
+              <Link href={`/tree/${category}`}>
+                {CATEGORY_LABELS[category] || category}
+              </Link>
+              <span aria-hidden="true">/</span>
+            </>
+          )}
           {view === 'exercise' && (
             <>
               <button

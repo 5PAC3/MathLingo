@@ -1,47 +1,71 @@
 {
+  "macros": [
+    { "id": "aritmetica", "label": "Aritmetica", "description": "Numeri, operazioni, frazioni e percentuali", "category": "aritmetica" },
+    { "id": "algebra", "label": "Algebra", "description": "Monomi, polinomi, equazioni e disequazioni", "category": "algebra" },
+    { "id": "geometria", "label": "Geometria", "description": "Piana, solida e trigonometria", "category": "geometria" },
+    { "id": "probabilita", "label": "Probabilit\u00e0 e Statistica", "description": "Probabilit\u00e0, statistica e calcolo combinatorio", "category": "probabilita" }
+  ],
   "nodes": [
-    {
-      "id": "addizione",
-      "label": "Addizione",
-      "description": "Impara a sommare numeri interi",
-      "category": "aritmetica"
-    },
-    {
-      "id": "sottrazione",
-      "label": "Sottrazione",
-      "description": "Impara a sottrarre numeri interi",
-      "category": "aritmetica"
-    },
-    {
-      "id": "moltiplicazione",
-      "label": "Moltiplicazione",
-      "description": "Impara a moltiplicare numeri interi",
-      "category": "aritmetica"
-    },
-    {
-      "id": "divisione",
-      "label": "Divisione",
-      "description": "Impara a dividere numeri interi",
-      "category": "aritmetica"
-    },
-    {
-      "id": "equazioni-primo-grado",
-      "label": "Equazioni di 1° grado",
-      "description": "Risolvi equazioni lineari a un'incognita",
-      "category": "algebra"
-    },
-    {
-      "id": "algebra-booleana",
-      "label": "Algebra booleana",
-      "description": "Operazioni logiche AND, OR, NOT",
-      "category": "informatica"
-    }
+    { "id": "addizione", "label": "Addizione", "description": "Somma di numeri interi", "category": "aritmetica" },
+    { "id": "sottrazione", "label": "Sottrazione", "description": "Differenza tra numeri interi", "category": "aritmetica" },
+    { "id": "moltiplicazione", "label": "Moltiplicazione", "description": "Prodotto di numeri interi", "category": "aritmetica" },
+    { "id": "divisione", "label": "Divisione", "description": "Divisione di numeri interi", "category": "aritmetica" },
+    { "id": "ordine-operazioni", "label": "Ordine delle operazioni", "description": "Priorit\u00e0 tra operazioni", "category": "aritmetica" },
+    { "id": "potenze", "label": "Potenze", "description": "Elevamento a potenza", "category": "aritmetica" },
+    { "id": "radici", "label": "Radici quadrate", "description": "Radice quadrata di un numero", "category": "aritmetica" },
+    { "id": "frazioni", "label": "Frazioni", "description": "Operazioni con le frazioni", "category": "aritmetica" },
+    { "id": "decimali", "label": "Numeri decimali", "description": "Operazioni con i decimali", "category": "aritmetica" },
+    { "id": "percentuali", "label": "Percentuali", "description": "Calcolo percentuale", "category": "aritmetica" },
+    { "id": "mcm-e-mcd", "label": "mcm e MCD", "description": "Minimo comune multiplo e massimo comun divisore", "category": "aritmetica" },
+    { "id": "numeri-primi", "label": "Numeri primi", "description": "Fattorizzazione e numeri primi", "category": "aritmetica" },
+    { "id": "espressioni-algebriche", "label": "Espressioni algebriche", "description": "Valutazione di espressioni", "category": "algebra" },
+    { "id": "monomi", "label": "Monomi", "description": "Operazioni con i monomi", "category": "algebra" },
+    { "id": "polinomi", "label": "Polinomi", "description": "Operazioni con i polinomi", "category": "algebra" },
+    { "id": "prodotti-notevoli", "label": "Prodotti notevoli", "description": "Formule di moltiplicazione speciali", "category": "algebra" },
+    { "id": "equazioni-primo-grado", "label": "Equazioni di 1\u00b0 grado", "description": "Risolvi equazioni lineari", "category": "algebra" },
+    { "id": "equazioni-secondo-grado", "label": "Equazioni di 2\u00b0 grado", "description": "Risolvi equazioni quadratiche", "category": "algebra" },
+    { "id": "sistemi-lineari", "label": "Sistemi lineari", "description": "Sistemi di equazioni lineari", "category": "algebra" },
+    { "id": "disequazioni", "label": "Disequazioni", "description": "Disequazioni lineari", "category": "algebra" },
+    { "id": "equazioni-fratte", "label": "Equazioni fratte", "description": "Equazioni con frazioni algebriche", "category": "algebra" },
+    { "id": "geometria-piana", "label": "Geometria piana", "description": "Aree e perimetri", "category": "geometria" },
+    { "id": "teorema-pitagora", "label": "Teorema di Pitagora", "description": "Relazione tra i lati di un triangolo rettangolo", "category": "geometria" },
+    { "id": "geometria-solida", "label": "Geometria solida", "description": "Volumi e superfici", "category": "geometria" },
+    { "id": "trigonometria", "label": "Trigonometria", "description": "Seno, coseno, tangente", "category": "geometria" },
+    { "id": "probabilita", "label": "Probabilit\u00e0", "description": "Calcolo delle probabilit\u00e0", "category": "probabilita" },
+    { "id": "statistica", "label": "Statistica", "description": "Media, mediana, moda", "category": "probabilita" },
+    { "id": "combinatoria", "label": "Calcolo combinatorio", "description": "Permutazioni, disposizioni, combinazioni", "category": "probabilita" }
   ],
   "edges": [
     { "from": "addizione", "to": "sottrazione" },
     { "from": "sottrazione", "to": "moltiplicazione" },
     { "from": "moltiplicazione", "to": "divisione" },
-    { "from": "divisione", "to": "equazioni-primo-grado" },
-    { "from": "equazioni-primo-grado", "to": "algebra-booleana" }
+    { "from": "divisione", "to": "ordine-operazioni" },
+    { "from": "ordine-operazioni", "to": "potenze" },
+    { "from": "ordine-operazioni", "to": "frazioni" },
+    { "from": "potenze", "to": "radici" },
+    { "from": "radici", "to": "espressioni-algebriche" },
+    { "from": "radici", "to": "mcm-e-mcd" },
+    { "from": "frazioni", "to": "decimali" },
+    { "from": "decimali", "to": "percentuali" },
+    { "from": "percentuali", "to": "mcm-e-mcd" },
+    { "from": "mcm-e-mcd", "to": "numeri-primi" },
+    { "from": "espressioni-algebriche", "to": "monomi" },
+    { "from": "monomi", "to": "polinomi" },
+    { "from": "polinomi", "to": "prodotti-notevoli" },
+    { "from": "numeri-primi", "to": "prodotti-notevoli" },
+    { "from": "prodotti-notevoli", "to": "equazioni-primo-grado" },
+    { "from": "equazioni-primo-grado", "to": "equazioni-secondo-grado" },
+    { "from": "equazioni-primo-grado", "to": "sistemi-lineari" },
+    { "from": "equazioni-primo-grado", "to": "disequazioni" },
+    { "from": "equazioni-secondo-grado", "to": "equazioni-fratte" },
+    { "from": "sistemi-lineari", "to": "geometria-piana" },
+    { "from": "numeri-primi", "to": "geometria-piana" },
+    { "from": "equazioni-fratte", "to": "geometria-piana" },
+    { "from": "geometria-piana", "to": "teorema-pitagora" },
+    { "from": "teorema-pitagora", "to": "geometria-solida" },
+    { "from": "geometria-solida", "to": "trigonometria" },
+    { "from": "trigonometria", "to": "probabilita" },
+    { "from": "probabilita", "to": "combinatoria" },
+    { "from": "probabilita", "to": "statistica" }
   ]
 }

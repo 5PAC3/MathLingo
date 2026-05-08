@@ -2,3 +2,11 @@ from . import addizione  # noqa: F401
 from . import sottrazione  # noqa: F401
 from . import moltiplicazione  # noqa: F401
 from . import divisione  # noqa: F401
+from . import ordine_operazioni  # noqa: F401
+from . import potenze  # noqa: F401
+from . import radici  # noqa: F401
+from . import frazioni  # noqa: F401
+from . import decimali  # noqa: F401
+from . import percentuali  # noqa: F401
+from . import mcm_mcd  # noqa: F401
+from . import numeri_primi  # noqa: F401

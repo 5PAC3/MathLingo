@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef, useCallback, type CSSProperties } from 'react'
-import { api, type SkillTreeData, type ProgressData, type SkillEdge } from '@/lib/api'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { api, type SkillTreeData, type ProgressData, type SkillEdge, type SkillNode } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 
 interface SkillTreeProps {
+  nodes?: SkillNode[]
+  edges?: SkillEdge[]
+  progress?: ProgressData
   onNodeClick: (nodeId: string) => void
 }
 
@@ -17,11 +20,24 @@ interface NodeLayout {
   completed: boolean
 }
 
+function edgesBetweenLevels(
+  levels: NodeLayout[][],
+  edges: SkillEdge[],
+  levelIdx: number,
+): SkillEdge[] {
+  if (levelIdx >= levels.length - 1) return []
+  const current = new Set(levels[levelIdx].map(n => n.id))
+  const next = new Set(levels[levelIdx + 1].map(n => n.id))
+  return edges.filter(e => current.has(e.from) && next.has(e.to))
+}
+
 function getCategoryColor(cat: string): string {
   const vars: Record<string, string> = {
     aritmetica: 'var(--cat-aritmetica)',
     algebra: 'var(--cat-algebra)',
     informatica: 'var(--cat-informatica)',
+    geometria: 'var(--cat-geometria)',
+    probabilita: 'var(--cat-probabilita)',
   }
   return vars[cat] || 'var(--fg-muted)'
 }
@@ -31,24 +47,26 @@ function getCategoryLabel(cat: string): string {
     aritmetica: 'Aritmetica',
     algebra: 'Algebra',
     informatica: 'Informatica',
+    geometria: 'Geometria',
+    probabilita: 'Probabilit\u00e0',
   }
   return labels[cat] || cat
 }
 
-function computeLayout(tree: SkillTreeData, progress: ProgressData): {
+function computeLayout(nodes: SkillNode[], edges: SkillEdge[], progress: ProgressData): {
   levels: NodeLayout[][]
-  edges: SkillEdge[]
+  allEdges: SkillEdge[]
 } {
   const levelMap = new Map<string, number>()
   const inDegree = new Map<string, number>()
   const adj = new Map<string, string[]>()
 
-  for (const n of tree.nodes) {
+  for (const n of nodes) {
     levelMap.set(n.id, 0)
     inDegree.set(n.id, 0)
     adj.set(n.id, [])
   }
-  for (const e of tree.edges) {
+  for (const e of edges) {
     adj.get(e.from)?.push(e.to)
     inDegree.set(e.to, (inDegree.get(e.to) || 0) + 1)
   }
@@ -68,7 +86,7 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
   }
 
   const byLevel = new Map<number, NodeLayout[]>()
-  for (const n of tree.nodes) {
+  for (const n of nodes) {
     const l = levelMap.get(n.id) || 0
     const p = progress[n.id]
     const completed = p
@@ -82,7 +100,7 @@ function computeLayout(tree: SkillTreeData, progress: ProgressData): {
     levels: Array.from(byLevel.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([, v]) => v),
-    edges: tree.edges,
+    allEdges: edges,
   }
 }
 
@@ -94,26 +112,32 @@ function ConnectorArrow() {
   )
 }
 
-export default function SkillTree({ onNodeClick }: SkillTreeProps) {
-  const [tree, setTree] = useState<SkillTreeData | null>(null)
-  const [progress, setProgress] = useState<ProgressData>({})
+export default function SkillTree({ nodes: propNodes, edges: propEdges, progress: propProgress, onNodeClick }: SkillTreeProps) {
+  const [fetchedTree, setFetchedTree] = useState<SkillTreeData | null>(null)
+  const [fetchedProgress, setFetchedProgress] = useState<ProgressData>({})
   const [focusIdx, setFocusIdx] = useState(0)
   const nodeRefs = useRef<(HTMLButtonElement | null)[]>([])
   const { token } = useAuth()
 
   useEffect(() => {
-    api.get<SkillTreeData>('/skilltree').then(setTree)
-  }, [])
+    if (!propNodes) {
+      api.get<SkillTreeData>('/skilltree').then(setFetchedTree)
+    }
+  }, [propNodes])
 
   useEffect(() => {
-    if (token) {
-      api.get<ProgressData>('/progress').then(setProgress).catch(() => {})
+    if (!propProgress && token) {
+      api.get<ProgressData>('/progress').then(setFetchedProgress).catch(() => {})
     }
-  }, [token])
+  }, [propProgress, token])
+
+  const nodes = propNodes ?? fetchedTree?.nodes ?? []
+  const edges = propEdges ?? fetchedTree?.edges ?? []
+  const progress = propProgress ?? fetchedProgress
 
   const layout = useMemo(
-    () => (tree ? computeLayout(tree, progress) : null),
-    [tree, progress],
+    () => computeLayout(nodes, edges, progress),
+    [nodes, edges, progress],
   )
 
   const flatNodes = useMemo(
@@ -172,7 +196,7 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
     focusNode(next)
   }, [focusIdx, flatNodes.length, focusNode])
 
-  if (!layout) {
+  if (!propNodes && !fetchedTree) {
     return (
       <div style={{ padding: '3rem 0' }} role="status" aria-label="Caricamento">
         <div className="spinner" />
@@ -271,7 +295,17 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
             })}
           </div>
 
-          {levelIdx < layout.levels.length - 1 && <ConnectorArrow />}
+          {levelIdx < layout.levels.length - 1 && (() => {
+            const levelEdges = edgesBetweenLevels(layout.levels, edges, levelIdx)
+            if (levelEdges.length === 0) return <ConnectorArrow />
+            return (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', width: '100%' }}>
+                {levelEdges.map(e => (
+                  <ConnectorArrow key={`${e.from}-${e.to}`} />
+                ))}
+              </div>
+            )
+          })()}
         </div>
       ))}
     </div>

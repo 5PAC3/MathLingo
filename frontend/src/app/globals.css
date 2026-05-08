@@ -32,6 +32,8 @@
   --cat-aritmetica: #3b82f6;
   --cat-algebra: #8b5cf6;
   --cat-informatica: #d97706;
+  --cat-geometria: #059669;
+  --cat-probabilita: #f59e0b;
 }
 
 [data-theme="dark"] {
@@ -64,6 +66,8 @@
   --cat-aritmetica: #82aaff;
   --cat-algebra: #c792ea;
   --cat-informatica: #ffcb6b;
+  --cat-geometria: #4fd1c5;
+  --cat-probabilita: #fbbf24;
 }
 
 * {

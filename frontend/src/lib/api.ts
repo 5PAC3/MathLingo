@@ -68,7 +68,15 @@ export interface SkillEdge {
   to: string
 }
 
+export interface MacroNode {
+  id: string
+  label: string
+  description: string
+  category: string
+}
+
 export interface SkillTreeData {
+  macros: MacroNode[]
   nodes: SkillNode[]
   edges: SkillEdge[]
 }
