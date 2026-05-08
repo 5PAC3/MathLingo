@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useRef, useCallback, useEffect, useState } from 'react'
 import type { MacroNode, SkillNode, ProgressData } from '@/lib/api'
 
 interface MacroTreeProps {
@@ -29,6 +29,58 @@ function ConnectorArrow() {
 }
 
 export default function MacroTree({ macros, nodes, progress, onMacroClick }: MacroTreeProps) {
+  const [focusIdx, setFocusIdx] = useState(0)
+  const nodeRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  useEffect(() => {
+    nodeRefs.current = nodeRefs.current.slice(0, macros.length)
+  }, [macros.length])
+
+  useEffect(() => {
+    const btn = nodeRefs.current[0]
+    if (btn && document.activeElement?.tagName !== 'BUTTON') {
+      btn.focus()
+    }
+  }, [])
+
+  const focusNode = useCallback((idx: number) => {
+    const btn = nodeRefs.current[idx]
+    if (btn) {
+      btn.focus()
+      setFocusIdx(idx)
+    }
+  }, [])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const len = macros.length
+    if (len === 0) return
+
+    let next = focusIdx
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        e.preventDefault()
+        next = focusIdx + 1 < len ? focusIdx + 1 : 0
+        break
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        e.preventDefault()
+        next = focusIdx - 1 >= 0 ? focusIdx - 1 : len - 1
+        break
+      case 'Home':
+        e.preventDefault()
+        next = 0
+        break
+      case 'End':
+        e.preventDefault()
+        next = len - 1
+        break
+      default:
+        return
+    }
+    focusNode(next)
+  }, [focusIdx, macros.length, focusNode])
+
   const macroProgress = useMemo(() => {
     const byCat: Record<string, { completed: number; total: number }> = {}
     for (const m of macros) {
@@ -39,7 +91,7 @@ export default function MacroTree({ macros, nodes, progress, onMacroClick }: Mac
       if (!byCat[cat]) continue
       byCat[cat].total++
       const p = progress[node.id]
-      if (p && Object.values(p).every((l) => l.completed)) {
+      if (p && Object.values(p).every((l: { completed: boolean }) => l.completed)) {
         byCat[cat].completed++
       }
     }
@@ -64,9 +116,14 @@ export default function MacroTree({ macros, nodes, progress, onMacroClick }: Mac
         return (
           <div key={macro.id} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <button
+              ref={el => { nodeRefs.current[idx] = el }}
               role="treeitem"
               aria-label={`${macro.label} — ${macro.description}`}
+              aria-setsize={macros.length}
+              aria-posinset={idx + 1}
+              tabIndex={idx === focusIdx ? 0 : -1}
               onClick={() => onMacroClick(macro.id)}
+              onKeyDown={handleKeyDown}
               className="card skill-node"
               style={{
                 flex: '0 1 auto',
