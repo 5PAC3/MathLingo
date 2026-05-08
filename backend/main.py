@@ -166,8 +166,8 @@ def placement_start(user: dict = Depends(auth.get_current_user)):
     for n in nodes:
         by_cat.setdefault(n["category"], []).append(n["id"])
 
-    cat_order = ["aritmetica", "algebra", "geometria", "probabilita"]
-    cat_counts = [3, 3, 2, 2]
+    cat_order = ["aritmetica", "algebra", "geometria", "logica", "geometria-analitica", "analisi", "probabilita"]
+    cat_counts = [2, 2, 1, 1, 1, 1, 2]
     selected: list[tuple[str, str]] = []
     for cat, count in zip(cat_order, cat_counts):
         pool = by_cat.get(cat, [])

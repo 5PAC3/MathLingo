@@ -14,7 +14,10 @@ function getCategoryColor(cat: string): string {
   const vars: Record<string, string> = {
     aritmetica: 'var(--cat-aritmetica)',
     algebra: 'var(--cat-algebra)',
+    logica: 'var(--cat-logica)',
     geometria: 'var(--cat-geometria)',
+    'geometria-analitica': 'var(--cat-geometria-analitica)',
+    analisi: 'var(--cat-analisi)',
     probabilita: 'var(--cat-probabilita)',
   }
   return vars[cat] || 'var(--fg-muted)'

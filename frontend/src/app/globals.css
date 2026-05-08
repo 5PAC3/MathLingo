@@ -34,6 +34,9 @@
   --cat-informatica: #d97706;
   --cat-geometria: #059669;
   --cat-probabilita: #f59e0b;
+  --cat-logica: #d97706;
+  --cat-geometria-analitica: #ec4899;
+  --cat-analisi: #14b8a6;
 }
 
 [data-theme="dark"] {
@@ -68,6 +71,9 @@
   --cat-informatica: #ffcb6b;
   --cat-geometria: #4fd1c5;
   --cat-probabilita: #fbbf24;
+  --cat-logica: #ffcb6b;
+  --cat-geometria-analitica: #f48fb1;
+  --cat-analisi: #4dd0e1;
 }
 
 * {

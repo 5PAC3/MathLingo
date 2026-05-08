@@ -46,18 +46,38 @@ class SistemiLineariGenerator(NodeGenerator):
         x, y = sp.symbols("x y")
         a, b, c, d, e, f, xv, yv = self._gen_system(level)
 
-        if random.choice([True, False]):
+        template = random.choice(["riduzione", "sostituzione", "cramer"] if level > 1 else ["riduzione"])
+
+        if template == "sostituzione":
+            var = random.choice(["x", "y"])
+            val = xv if var == "x" else yv
             return Exercise(
-                question=f"Risolvi il sistema: {{ {a}x + {b}y = {c}, {d}x + {e}y = {f} }}. Quanto vale x?",
-                solution=str(xv),
-                hints=["Isola una variabile in un'equazione e sostituisci nell'altra."],
+                question=f"Risolvi per sostituzione: {{ {a}x + {b}y = {c}, {d}x + {e}y = {f} }}. Quanto vale {var}?",
+                solution=str(val),
+                hints=[f"Isola {var} in un'equazione e sostituisci nell'altra."],
+            )
+        elif template == "cramer":
+            det = a * e - b * d
+            det_x = c * e - b * f
+            det_y = a * f - c * d
+            return Exercise(
+                question=f"Usa Cramer: {{ {a}x + {b}y = {c}, {d}x + {e}y = {f} }}. Quanto vale x?",
+                solution=str(det_x // det),
+                hints=[f"det = {a}×{e} - {b}×{d} = {det}", f"det_x = {c}×{e} - {b}×{f} = {det_x}", f"x = {det_x}/{det} = {det_x // det}"],
             )
         else:
-            return Exercise(
-                question=f"Risolvi: {{ {a}x + {b}y = {c}, {d}x + {e}y = {f} }}. Quanto vale y?",
-                solution=str(yv),
-                hints=["Usa il metodo di sostituzione o di riduzione."],
-            )
+            if random.choice([True, False]):
+                return Exercise(
+                    question=f"Risolvi: {{ {a}x + {b}y = {c}, {d}x + {e}y = {f} }}. Quanto vale x?",
+                    solution=str(xv),
+                    hints=["Somma o sottrai le equazioni dopo aver moltiplicato opportunamente."],
+                )
+            else:
+                return Exercise(
+                    question=f"Risolvi: {{ {a}x + {b}y = {c}, {d}x + {e}y = {f} }}. Quanto vale y?",
+                    solution=str(yv),
+                    hints=["Usa il metodo di riduzione per eliminare una variabile."],
+                )
 
 
 register("sistemi-lineari", SistemiLineariGenerator())

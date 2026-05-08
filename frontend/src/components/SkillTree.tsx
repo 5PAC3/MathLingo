@@ -35,8 +35,11 @@ function getCategoryColor(cat: string): string {
   const vars: Record<string, string> = {
     aritmetica: 'var(--cat-aritmetica)',
     algebra: 'var(--cat-algebra)',
+    logica: 'var(--cat-logica)',
     informatica: 'var(--cat-informatica)',
     geometria: 'var(--cat-geometria)',
+    'geometria-analitica': 'var(--cat-geometria-analitica)',
+    analisi: 'var(--cat-analisi)',
     probabilita: 'var(--cat-probabilita)',
   }
   return vars[cat] || 'var(--fg-muted)'
@@ -46,8 +49,11 @@ function getCategoryLabel(cat: string): string {
   const labels: Record<string, string> = {
     aritmetica: 'Aritmetica',
     algebra: 'Algebra',
+    logica: 'Logica',
     informatica: 'Informatica',
     geometria: 'Geometria',
+    'geometria-analitica': 'Geom. Analitica',
+    analisi: 'Analisi',
     probabilita: 'Probabilit\u00e0',
   }
   return labels[cat] || cat

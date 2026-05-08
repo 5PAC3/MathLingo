@@ -155,17 +155,23 @@ interface NodeViewProps {
 const CATEGORY_LABELS: Record<string, string> = {
   aritmetica: 'Aritmetica',
   algebra: 'Algebra',
-    informatica: 'Informatica',
-    geometria: 'Geometria',
-    probabilita: 'Probabilit\u00e0',
+  logica: 'Logica',
+  informatica: 'Informatica',
+  geometria: 'Geometria',
+  'geometria-analitica': 'Geometria Analitica',
+  analisi: 'Analisi',
+  probabilita: 'Probabilit\u00e0',
 }
 
 function categoryColor(cat: string): string {
   const vars: Record<string, string> = {
     aritmetica: 'var(--cat-aritmetica)',
     algebra: 'var(--cat-algebra)',
+    logica: 'var(--cat-logica)',
     informatica: 'var(--cat-informatica)',
     geometria: 'var(--cat-geometria)',
+    'geometria-analitica': 'var(--cat-geometria-analitica)',
+    analisi: 'var(--cat-analisi)',
     probabilita: 'var(--cat-probabilita)',
   }
   return vars[cat] || 'var(--primary)'
