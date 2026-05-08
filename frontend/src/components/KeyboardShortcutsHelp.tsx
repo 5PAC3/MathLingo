@@ -30,13 +30,21 @@ const TREE: ShortcutSection = {
   ],
 }
 
-const NODE: ShortcutSection = {
-  section: 'Nodo esercizio',
+const NODE_THEORY: ShortcutSection = {
+  section: 'Nodo (teoria)',
   keys: [
+    { key: 'e', desc: 'Vai agli esercizi' },
+    { key: 'Escape', desc: 'Torna allo skill tree' },
+  ],
+}
+
+const NODE_EXERCISE: ShortcutSection = {
+  section: 'Nodo (esercizi)',
+  keys: [
+    { key: 't', desc: 'Torna alla teoria' },
     { key: '1 2 3', desc: 'Seleziona livello' },
     { key: 'n', desc: 'Nuovo esercizio' },
     { key: 'h', desc: 'Suggerimenti' },
-    { key: 't', desc: 'Teoria' },
     { key: 'Enter', desc: 'Invia risposta' },
     { key: '^Enter', desc: 'Invia risposta' },
     { key: 'Escape', desc: 'Torna allo skill tree' },
@@ -72,7 +80,7 @@ export default function KeyboardShortcutsHelp() {
 
   const sections = [GLOBAL]
   if (isTree) sections.push(TREE)
-  if (isNode) sections.push(NODE)
+  if (isNode) sections.push(NODE_THEORY, NODE_EXERCISE)
 
   return (
     <>

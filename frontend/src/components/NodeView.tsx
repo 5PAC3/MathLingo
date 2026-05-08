@@ -171,7 +171,7 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
   const [theory, setTheory] = useState<string | null>(null)
   const [theoryError, setTheoryError] = useState(false)
   const [level, setLevel] = useState(1)
-  const [showTheory, setShowTheory] = useState(true)
+  const [view, setView] = useState<'theory' | 'exercise'>('theory')
   const [showBackToTop, setShowBackToTop] = useState(false)
   const headingRef = useRef<HTMLHeadingElement>(null)
 
@@ -191,10 +191,11 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
 
   useHotkeys({
     'Escape': onBack,
-    't': () => setShowTheory(v => !v),
-    '1': () => setLevel(1),
-    '2': () => setLevel(2),
-    '3': () => setLevel(3),
+    'e': () => { if (view === 'theory' && !theoryError) setView('exercise') },
+    't': () => { if (view === 'exercise') setView('theory') },
+    '1': () => { if (view === 'exercise') setLevel(1) },
+    '2': () => { if (view === 'exercise') setLevel(2) },
+    '3': () => { if (view === 'exercise') setLevel(3) },
   })
 
   useEffect(() => {
@@ -217,142 +218,107 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <Link href="/tree">Skill Tree</Link>
           <span aria-hidden="true">/</span>
-          <span aria-current="page">{nodeLabel}</span>
+          {view === 'exercise' && (
+            <>
+              <button
+                onClick={() => setView('theory')}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.8rem',
+                  color: 'var(--fg-muted)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  textDecoration: 'none',
+                }}
+              >
+                {nodeLabel}
+              </button>
+              <span aria-hidden="true">/</span>
+            </>
+          )}
+          <span aria-current="page">{view === 'theory' ? nodeLabel : 'Esercizi'}</span>
         </nav>
 
         {nodeInfo && (
-          <div
-            className="card mb-2"
-            style={{
-              borderLeft: `4px solid ${color}`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <div
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  background: color,
-                  flexShrink: 0,
-                }}
-              />
-              <h1
-                ref={headingRef}
-                tabIndex={-1}
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '1.3rem',
-                  fontWeight: 700,
-                }}
-              >
+          <div className="card mb-2" style={{ borderLeft: `4px solid ${color}` }}>
+            <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <h1 ref={headingRef} tabIndex={-1} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700 }}>
                 {nodeInfo.label}
               </h1>
+              <span className="badge" style={{ background: `${color}18`, color }}>
+                {CATEGORY_LABELS[nodeInfo.category] || nodeInfo.category}
+              </span>
             </div>
-            <span
-              className="badge"
-              style={{
-                background: `${color}18`,
-                color,
-              }}
-            >
-              {CATEGORY_LABELS[nodeInfo.category] || nodeInfo.category}
-            </span>
-            <p className="text-muted w-full" style={{ fontSize: '0.9rem', marginTop: '-0.25rem' }}>
+            <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
               {nodeInfo.description}
             </p>
           </div>
         )}
 
-        <div className="card mb-2 double-border">
-          <button
-            className="btn btn-sm btn-ghost"
-            onClick={() => setShowTheory(!showTheory)}
-            aria-expanded={showTheory}
-            aria-controls="theory-content"
-            style={{
-              marginBottom: showTheory && theory ? '0.75rem' : 0,
-              fontSize: '0.85rem',
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 600,
-              color: 'var(--fg)',
-            }}
-          >
-            <span
-              style={{
-                display: 'inline-block',
-                transition: 'transform 0.2s ease',
-                transform: showTheory ? 'rotate(90deg)' : 'rotate(0deg)',
-              }}
-            >
-              ▸
-            </span>{' '}
-            Teoria <kbd className="shortcut-hint">t</kbd>
-          </button>
-          <div
-            id="theory-content"
-            style={{
-              display: showTheory ? 'block' : 'none',
-              lineHeight: 1.8,
-              color: 'var(--fg-muted)',
-              fontSize: '0.92rem',
-            }}
-          >
-            {theory ? (
-              <div
-                style={{
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {theory.split('\n').map((line, i) => renderLine(line, i))}
-              </div>
-            ) : theoryError ? (
-              <p className="text-muted">
-                Teoria non disponibile per questo nodo.
-              </p>
-            ) : (
-              <div className="spinner" />
-            )}
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center justify-between mb-2" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h2
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '1rem',
-                fontWeight: 700,
-              }}
-            >
-              Esercizi
-            </h2>
-            <div className="flex gap-1" role="tablist" aria-label="Livello di difficoltà">
-              {[1, 2, 3].map(l => (
-                <button
-                  key={l}
-                  role="tab"
-                  aria-selected={level === l}
-                  className={`btn btn-sm ${level === l ? 'btn' : 'btn-outline'}`}
-                  onClick={() => setLevel(l)}
-                  style={{ gap: '0.2rem' }}
-                >
-                  Liv. {l} <kbd className="shortcut-hint">{l}</kbd>
-                </button>
-              ))}
+        {view === 'theory' ? (
+          <>
+            <div className="card mb-2 double-border">
+              {theory ? (
+                <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.8, color: 'var(--fg-muted)', fontSize: '0.92rem' }}>
+                  {theory.split('\n').map((line, i) => renderLine(line, i))}
+                </div>
+              ) : theoryError ? (
+                <p className="text-muted">Teoria non disponibile per questo nodo.</p>
+              ) : (
+                <div className="spinner" />
+              )}
             </div>
-          </div>
-          <ExerciseInput
-            key={`${nodeId}-${level}`}
-            nodeId={nodeId}
-            level={level}
-          />
-        </div>
+
+            <div className="text-center" style={{ marginBottom: '1rem' }}>
+              <button
+                className="btn"
+                onClick={() => setView('exercise')}
+                disabled={!theory && !theoryError}
+                style={{ fontSize: '1rem', padding: '0.75rem 2rem' }}
+              >
+                Vai agli esercizi → <kbd className="shortcut-hint">e</kbd>
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-center mb-2">
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={() => setView('theory')}
+                style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}
+              >
+                ← Torna alla teoria <kbd className="shortcut-hint">t</kbd>
+              </button>
+            </div>
+
+            <div className="card">
+              <div className="flex items-center justify-between mb-2" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 700 }}>
+                  Esercizi
+                </h2>
+                <div className="flex gap-1" role="tablist" aria-label="Livello di difficoltà">
+                  {[1, 2, 3].map(l => (
+                    <button
+                      key={l}
+                      role="tab"
+                      aria-selected={level === l}
+                      className={`btn btn-sm ${level === l ? 'btn' : 'btn-outline'}`}
+                      onClick={() => setLevel(l)}
+                      style={{ gap: '0.2rem' }}
+                    >
+                      Liv. {l} <kbd className="shortcut-hint">{l}</kbd>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <ExerciseInput key={`${nodeId}-${level}`} nodeId={nodeId} level={level} />
+            </div>
+          </>
+        )}
       </div>
 
       <button
