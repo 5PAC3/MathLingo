@@ -28,6 +28,24 @@ export default function Navbar() {
           >
             MathLingo
           </a>
+          <a
+            href="/formulario"
+            aria-label="Formulario"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 500,
+              fontSize: '0.8rem',
+              color: 'var(--fg-muted)',
+              textDecoration: 'none',
+              marginLeft: '0.75rem',
+              opacity: 0.7,
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1' }}
+            onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0.7' }}
+          >
+            [formulario]
+          </a>
 
           <div className="flex items-center gap-1">
             {user && (
