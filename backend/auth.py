@@ -28,6 +28,7 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     token: str
     username: str
+    placement_done: bool
 
 
 class UserInfo(BaseModel):
@@ -85,17 +86,21 @@ def register(req: RegisterRequest) -> TokenResponse:
         pw_hash,
     )
     token = create_token(user_id, username)
-    return TokenResponse(token=token, username=username)
+    return TokenResponse(token=token, username=username, placement_done=False)
 
 
 def login(req: LoginRequest) -> TokenResponse:
     username = req.username.strip()
     user = db.query_one(
-        "SELECT id, username, password_hash FROM users WHERE username = ?",
+        "SELECT id, username, password_hash, placement_done FROM users WHERE username = ?",
         username,
     )
     if not user or not verify_password(req.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     token = create_token(user["id"], user["username"])
-    return TokenResponse(token=token, username=user["username"])
+    return TokenResponse(
+        token=token,
+        username=user["username"],
+        placement_done=bool(user["placement_done"]),
+    )

@@ -41,6 +41,41 @@ export const api = {
 export interface AuthResponse {
   token: string
   username: string
+  placement_done: boolean
+}
+
+export interface UserInfo {
+  id: number
+  username: string
+  placement_done: boolean
+}
+
+export interface PlacementQuestion {
+  id: string
+  node_id: string
+  category: string
+  level: number
+  question: string
+  hints: string[]
+}
+
+export interface PlacementStartResponse {
+  placement_id: string
+  questions: PlacementQuestion[]
+}
+
+export interface PlacementAnswerResponse {
+  correct: boolean
+  expected: string
+}
+
+export interface PlacementStats {
+  [category: string]: { correct: number; total: number }
+}
+
+export interface PlacementFinishResponse {
+  ok: boolean
+  stats: PlacementStats
 }
 
 export interface ExerciseData {

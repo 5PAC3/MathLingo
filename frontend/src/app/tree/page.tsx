@@ -9,7 +9,7 @@ import Navbar from '@/components/Navbar'
 
 export default function TreePage() {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, placement_done, loading } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [tree, setTree] = useState<SkillTreeData | null>(null)
   const [progress, setProgress] = useState<ProgressData>({})
@@ -29,6 +29,10 @@ export default function TreePage() {
   useEffect(() => {
     if (mounted && !loading && !user) router.push('/login')
   }, [mounted, loading, user, router])
+
+  useEffect(() => {
+    if (mounted && !loading && user && !placement_done) router.push('/placement')
+  }, [mounted, loading, user, placement_done, router])
 
   if (!mounted || loading || !user || !tree) {
     return (
