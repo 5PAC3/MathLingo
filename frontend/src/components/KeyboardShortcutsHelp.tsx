@@ -2,174 +2,195 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useHotkeys } from '@/lib/hotkeys'
-import { usePathname } from 'next/navigation'
-
-interface ShortcutEntry {
-  key: string
-  desc: string
-}
-
-interface ShortcutSection {
-  section: string
-  keys: ShortcutEntry[]
-}
-
-const GLOBAL: ShortcutSection = {
-  section: 'Global',
-  keys: [
-    { key: '?', desc: 'Apri/chiudi aiuto' },
-    { key: 'Escape', desc: 'Chiudi / indietro' },
-  ],
-}
-
-const TREE: ShortcutSection = {
-  section: 'Skill Tree',
-  keys: [
-    { key: '\u2191 \u2193 \u2190 \u2192', desc: 'Naviga nodi' },
-    { key: 'Enter', desc: 'Apri nodo' },
-  ],
-}
-
-const NODE_THEORY: ShortcutSection = {
-  section: 'Nodo (teoria)',
-  keys: [
-    { key: 'e', desc: 'Vai agli esercizi' },
-    { key: 'Escape', desc: 'Torna allo skill tree' },
-  ],
-}
-
-const NODE_EXERCISE: ShortcutSection = {
-  section: 'Nodo (esercizi)',
-  keys: [
-    { key: 't', desc: 'Torna alla teoria' },
-    { key: '1 2 3', desc: 'Seleziona livello' },
-    { key: 'n', desc: 'Nuovo esercizio' },
-    { key: 'h', desc: 'Suggerimenti' },
-    { key: 'Enter', desc: 'Invia risposta' },
-    { key: '^Enter', desc: 'Invia risposta' },
-    { key: 'Escape', desc: 'Torna allo skill tree' },
-  ],
-}
+import { useI18n } from '@/lib/i18n'
 
 export default function KeyboardShortcutsHelp() {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
-  const pathname = usePathname()
 
   useHotkeys({
-    '?': () => setOpen((v) => !v),
+    '?': () => setOpen(v => !v),
     'Escape': () => setOpen(false),
   })
 
-  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') setOpen(false)
-  }, [])
+  const close = useCallback(() => setOpen(false), [])
 
   useEffect(() => {
-    if (open) {
-      const el = document.getElementById('shortcuts-help')
-      el?.focus()
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
     }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
   }, [open])
 
   useEffect(() => {
-    setOpen(false)
-  }, [pathname])
-
-  const isTree = pathname === '/tree'
-  const isNode = pathname.startsWith('/node/')
-
-  const sections = [GLOBAL]
-  if (isTree) sections.push(TREE)
-  if (isNode) sections.push(NODE_THEORY, NODE_EXERCISE)
+    const btn = document.getElementById('help-toggle')
+    if (btn) btn.style.display = 'block'
+  }, [])
 
   return (
     <>
       <button
-        className="help-indicator"
-        onClick={() => setOpen(true)}
-        aria-label="Aiuto scorciatoie da tastiera"
-        title="Scorciatoie da tastiera"
+        id="help-toggle"
+        className="btn btn-sm btn-ghost"
+        onClick={() => setOpen(v => !v)}
+        aria-label={t('aria.help')}
+        title={t('heading.keyboard_shortcuts')}
+        style={{
+          position: 'fixed',
+          bottom: '0.75rem',
+          left: '0.75rem',
+          zIndex: 50,
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.75rem',
+          opacity: 0.6,
+          display: 'none',
+        }}
       >
-        [?] aiuto
+        {t('help.button')}
       </button>
 
       {open && (
         <div
           role="dialog"
-          aria-modal="true"
-          aria-label="Scorciatoie da tastiera"
-          className="help-overlay"
-          onKeyDown={onKeyDown}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setOpen(false)
+          aria-label={t('heading.keyboard_shortcuts')}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
           }}
+          onClick={close}
         >
-          <div className="help-panel" id="shortcuts-help" tabIndex={-1}>
-            <div className="help-header">
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.9rem',
-                  fontWeight: 700,
-                }}
-              >
-                Keyboard Shortcuts
-              </span>
-              <button
-                className="btn btn-sm btn-ghost"
-                onClick={() => setOpen(false)}
-                aria-label="Chiudi"
-                style={{ fontSize: '0.9rem' }}
-              >
-                ✕
-              </button>
-            </div>
+          <div
+            className="card"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: 480,
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              padding: '1.5rem',
+            }}
+          >
+            <h2
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '1rem',
+                fontWeight: 700,
+                marginTop: 0,
+                color: 'var(--fg)',
+              }}
+            >
+              {t('shortcut.dialog_title')}
+            </h2>
 
-            {sections.map((sec) => (
-              <div key={sec.section} style={{ marginTop: '0.75rem' }}>
-                <p
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    color: 'var(--fg-muted)',
-                    marginBottom: '0.35rem',
-                    opacity: 0.6,
-                  }}
-                >
-                  ── {sec.section} ──
-                </p>
-                {sec.keys.map((k) => (
-                  <div
-                    key={k.key}
-                    className="help-row"
-                  >
-                    <code className="help-key">{k.key}</code>
-                    <span className="help-desc">{k.desc}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
+            <Section title={t('shortcut.section.global')}>
+              <Row keys="?" desc={t('shortcut.toggle_help')} />
+              <Row keys={t('key_hint.Escape')} desc={t('shortcut.close_back')} />
+            </Section>
+
+            <Section title={t('shortcut.section.tree')}>
+              <Row keys="↑↓←→" desc={t('shortcut.navigate_nodes')} />
+              <Row keys={t('key_hint.Enter')} desc={t('shortcut.open_node')} />
+            </Section>
+
+            <Section title={t('shortcut.section.theory')}>
+              <Row keys={t('key_hint.e')} desc={t('shortcut.go_to_exercises')} />
+              <Row keys={t('key_hint.Escape')} desc={t('shortcut.back_to_tree')} />
+            </Section>
+
+            <Section title={t('shortcut.section.exercises')}>
+              <Row keys={t('key_hint.t')} desc={t('shortcut.back_to_theory')} />
+              <Row keys={`${t('key_hint.1')} ${t('key_hint.2')} ${t('key_hint.3')}`} desc={t('shortcut.select_level')} />
+              <Row keys={t('key_hint.n')} desc={t('shortcut.new_exercise')} />
+              <Row keys={t('key_hint.h')} desc={t('shortcut.hints')} />
+              <Row keys={t('key_hint.Enter')} desc={t('shortcut.submit')} />
+              <Row keys={t('key_hint.ctrl_enter')} desc={t('shortcut.submit_ctrl')} />
+              <Row keys={t('key_hint.Escape')} desc={t('shortcut.back_to_tree')} />
+            </Section>
 
             <p
               style={{
-                marginTop: '1rem',
-                paddingTop: '0.75rem',
-                borderTop: '1px solid var(--card-border)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.7rem',
-                color: 'var(--fg-muted)',
                 textAlign: 'center',
-                opacity: 0.5,
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.72rem',
+                color: 'var(--fg-muted)',
+                marginTop: '1rem',
+                marginBottom: 0,
               }}
             >
-              premi ? per chiudere
+              {t('shortcut.dialog_hint')}
             </p>
           </div>
         </div>
       )}
     </>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginTop: '1rem' }}>
+      <h3
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.8rem',
+          fontWeight: 600,
+          color: 'var(--primary)',
+          margin: '0 0 0.4rem',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}
+      >
+        {title}
+      </h3>
+      {children}
+    </div>
+  )
+}
+
+function Row({ keys, desc }: { keys: string; desc: string }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        padding: '0.25rem 0',
+      }}
+    >
+      <kbd
+        style={{
+          fontFamily: 'var(--font-mono)',
+          background: 'var(--bg-alt)',
+          border: '1px solid var(--card-border)',
+          borderRadius: 4,
+          padding: '0.15rem 0.5rem',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          color: 'var(--fg)',
+          minWidth: 32,
+          textAlign: 'center',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {keys}
+      </kbd>
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.78rem',
+          color: 'var(--fg)',
+        }}
+      >
+        {desc}
+      </span>
+    </div>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useCallback, useEffect, useState } from 'react'
+import { useI18n } from '@/lib/i18n'
 import type { MacroNode, SkillNode, ProgressData } from '@/lib/api'
 
 interface MacroTreeProps {
@@ -32,6 +33,7 @@ function ConnectorArrow() {
 }
 
 export default function MacroTree({ macros, nodes, progress, onMacroClick }: MacroTreeProps) {
+  const { t } = useI18n()
   const [focusIdx, setFocusIdx] = useState(0)
   const nodeRefs = useRef<(HTMLButtonElement | null)[]>([])
 
@@ -104,7 +106,7 @@ export default function MacroTree({ macros, nodes, progress, onMacroClick }: Mac
   return (
     <div
       role="tree"
-      aria-label="Percorsi di apprendimento"
+      aria-label={t('aria.learning_paths')}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -176,7 +178,7 @@ export default function MacroTree({ macros, nodes, progress, onMacroClick }: Mac
                     fontSize: '0.72rem',
                   }}
                 >
-                  {stat.completed}/{stat.total} completati
+                  {t('macro.completed', { completed: stat.completed, total: stat.total })}
                 </span>
               </div>
             </button>
