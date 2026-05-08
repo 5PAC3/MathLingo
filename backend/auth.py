@@ -6,9 +6,15 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+import os
+
 from . import database as db
 
-SECRET_KEY = "mathlingo-secret-key-change-in-production"
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    import sys
+    print("WARNING: JWT_SECRET_KEY not set, using insecure default (set it in production)", file=sys.stderr)
+    SECRET_KEY = "dev-secret-key-do-not-use-in-production"
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 
@@ -72,8 +78,8 @@ def register(req: RegisterRequest) -> TokenResponse:
     username = req.username.strip()
     if len(username) < 3:
         raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
-    if len(req.password) < 4:
-        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    if len(req.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
     existing = db.query_one("SELECT id FROM users WHERE username = ?", username)
     if existing:

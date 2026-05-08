@@ -1,13 +1,15 @@
 import hashlib
 import json
+import os
 import random
 import sqlite3
+import time
 from pathlib import Path
 
 import sympy as sp
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sympy.parsing.sympy_parser import (
     implicit_multiplication_application,
     parse_expr,
@@ -18,11 +20,24 @@ from . import auth
 from . import database as db
 from .nodes import get_generator, list_nodes
 
+_ratelimit: dict[str, list[float]] = {}
+
+
+def _check_ratelimit(key: str, max_attempts: int = 5, window: int = 300):
+    now = time.time()
+    entries = _ratelimit.get(key, [])
+    entries = [t for t in entries if now - t < window]
+    if len(entries) >= max_attempts:
+        raise HTTPException(429, "Troppi tentativi. Riprova più tardi.")
+    entries.append(now)
+    _ratelimit[key] = entries
+
 app = FastAPI(title="MathLingo API")
 
+_cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,12 +72,14 @@ class LoginRequest(BaseModel):
 
 
 @app.post("/auth/register")
-def register(req: RegisterRequest):
+def register(req: RegisterRequest, request: Request):
+    _check_ratelimit(f"register:{request.client.host}", max_attempts=3, window=600)
     return auth.register(auth.RegisterRequest(**req.model_dump()))
 
 
 @app.post("/auth/login")
-def login(req: LoginRequest):
+def login(req: LoginRequest, request: Request):
+    _check_ratelimit(f"login:{request.client.host}", max_attempts=5, window=300)
     return auth.login(auth.LoginRequest(**req.model_dump()))
 
 
@@ -71,8 +88,8 @@ def login(req: LoginRequest):
 
 class ProgressUpdate(BaseModel):
     node_id: str
-    level: int
-    score: float
+    level: int = Field(ge=1, le=3)
+    score: float = Field(ge=0, le=100)
     completed: bool
 
 
@@ -207,16 +224,13 @@ def placement_answer(
     transformations = standard_transformations + (implicit_multiplication_application,)
 
     def _parse(expr_str: str):
-        try:
-            return parse_expr(expr_str, transformations=transformations)
-        except (SyntaxError, TypeError, ValueError):
-            return sp.sympify(expr_str)
+        return parse_expr(expr_str, transformations=transformations)
 
     try:
         user_expr = _parse(user_answer)
         sol_expr = _parse(solution)
         is_correct = sp.simplify(user_expr - sol_expr) == 0
-    except (sp.SympifyError, TypeError, ValueError):
+    except Exception:
         is_correct = user_answer.strip() == solution.strip()
 
     store["answers"][question_id] = is_correct
@@ -292,6 +306,8 @@ def placement_finish(
 
 @app.get("/content/{node_id}")
 def get_content(node_id: str):
+    if not node_id.replace("-", "").isalnum():
+        raise HTTPException(status_code=400, detail="Invalid node_id")
     filepath = _content_dir / f"{node_id}.md"
     if not filepath.exists():
         raise HTTPException(status_code=404, detail="Theory not found")
@@ -313,7 +329,7 @@ def get_skilltree():
 
 class GenerateRequest(BaseModel):
     node_id: str
-    level: int = 1
+    level: int = Field(default=1, ge=1, le=3)
 
 
 class ValidateRequest(BaseModel):
@@ -330,9 +346,6 @@ def generate_exercise(
         generator = get_generator(body.node_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-
-    if not (1 <= body.level <= 3):
-        raise HTTPException(status_code=400, detail="Level must be 1-3")
 
     exercise = generator.generate(body.level)
 
@@ -361,16 +374,13 @@ def validate_answer(
     transformations = standard_transformations + (implicit_multiplication_application,)
 
     def _parse(expr_str: str):
-        try:
-            return parse_expr(expr_str, transformations=transformations)
-        except (SyntaxError, TypeError, ValueError):
-            return sp.sympify(expr_str)
+        return parse_expr(expr_str, transformations=transformations)
 
     try:
         user_expr = _parse(body.user_answer)
         sol_expr = _parse(solution_str)
         is_correct = sp.simplify(user_expr - sol_expr) == 0
-    except (sp.SympifyError, TypeError, ValueError):
+    except Exception:
         is_correct = body.user_answer.strip() == solution_str.strip()
 
     return {
