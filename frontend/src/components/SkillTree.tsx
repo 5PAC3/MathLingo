@@ -125,6 +125,15 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
     nodeRefs.current = nodeRefs.current.slice(0, flatNodes.length)
   }, [flatNodes.length])
 
+  useEffect(() => {
+    if (flatNodes.length > 0 && focusIdx === 0) {
+      const btn = nodeRefs.current[0]
+      if (btn && document.activeElement?.tagName !== 'BUTTON') {
+        btn.focus()
+      }
+    }
+  }, [flatNodes.length, focusIdx])
+
   const focusNode = useCallback((idx: number) => {
     const btn = nodeRefs.current[idx]
     if (btn) {
@@ -181,7 +190,6 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
     <div
       role="tree"
       aria-label="Albero delle competenze"
-      onKeyDown={handleKeyDown}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -208,6 +216,7 @@ export default function SkillTree({ onNodeClick }: SkillTreeProps) {
                   aria-posinset={idx + 1}
                   tabIndex={idx === focusIdx ? 0 : -1}
                   onClick={() => onNodeClick(node.id)}
+                  onKeyDown={handleKeyDown}
                   title={node.description}
                   className={`card skill-node ${node.completed ? 'skill-node-completed' : ''}`}
                   style={{

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
 import katex from 'katex'
 import { api, type SkillTreeData } from '@/lib/api'
+import { useHotkeys } from '@/lib/hotkeys'
 import ExerciseInput from './ExerciseInput'
 
 
@@ -173,8 +174,6 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
   const [showTheory, setShowTheory] = useState(true)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const headingRef = useRef<HTMLHeadingElement>(null)
-  const onBackRef = useRef(onBack)
-  onBackRef.current = onBack
 
   useEffect(() => {
     api.get<SkillTreeData>('/skilltree').then(setTree)
@@ -190,13 +189,13 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
       })
   }, [nodeId])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.repeat) onBackRef.current()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  useHotkeys({
+    'Escape': onBack,
+    't': () => setShowTheory(v => !v),
+    '1': () => setLevel(1),
+    '2': () => setLevel(2),
+    '3': () => setLevel(3),
+  })
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -292,7 +291,7 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
             >
               ▸
             </span>{' '}
-            Teoria
+            Teoria <kbd className="shortcut-hint">t</kbd>
           </button>
           <div
             id="theory-content"
@@ -341,8 +340,9 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
                   aria-selected={level === l}
                   className={`btn btn-sm ${level === l ? 'btn' : 'btn-outline'}`}
                   onClick={() => setLevel(l)}
+                  style={{ gap: '0.2rem' }}
                 >
-                  Liv. {l}
+                  Liv. {l} <kbd className="shortcut-hint">{l}</kbd>
                 </button>
               ))}
             </div>

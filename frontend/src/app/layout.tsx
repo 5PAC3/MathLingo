@@ -4,6 +4,7 @@ import './globals.css'
 import 'katex/dist/katex.min.css'
 import { AuthProvider } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
+import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp'
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </main>
           </AuthProvider>
         </ThemeProvider>
+        <KeyboardShortcutsHelp />
       </body>
     </html>
   )

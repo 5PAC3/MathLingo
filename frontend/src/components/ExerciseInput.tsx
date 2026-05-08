@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { api, type ExerciseData, type ValidationResult } from '@/lib/api'
+import { useHotkeys } from '@/lib/hotkeys'
 
 interface ExerciseInputProps {
   nodeId: string
@@ -19,6 +20,24 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
   const [focusTarget, setFocusTarget] = useState<'input' | 'result' | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const prevResultRef = useRef<ValidationResult | null>(null)
+
+  useHotkeys({
+    'n': () => { if (!busy) loadExercise() },
+    'h': () => { if (exercise) setShowHints(v => !v) },
+  })
+
+  useEffect(() => {
+    if (focusTarget === 'input') inputRef.current?.focus()
+    else if (focusTarget === 'result') {
+      const el = document.getElementById('exercise-result')
+      el?.focus()
+    }
+    setFocusTarget(null)
+  }, [focusTarget])
+
+  useEffect(() => {
+    prevResultRef.current = result
+  }, [result])
 
   const saveProgress = useCallback(
     async (score: number) => {
@@ -93,19 +112,6 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
     }
   }
 
-  useEffect(() => {
-    if (focusTarget === 'input') inputRef.current?.focus()
-    else if (focusTarget === 'result') {
-      const el = document.getElementById('exercise-result')
-      el?.focus()
-    }
-    setFocusTarget(null)
-  }, [focusTarget])
-
-  useEffect(() => {
-    prevResultRef.current = result
-  }, [result])
-
   return (
     <div>
       {!exercise ? (
@@ -114,7 +120,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
             Premi &ldquo;Nuovo esercizio&rdquo; per iniziare
           </p>
           <button className="btn" onClick={loadExercise} disabled={busy}>
-            {busy ? 'Caricamento...' : 'Nuovo esercizio'}
+            {busy ? 'Caricamento...' : 'Nuovo esercizio'} <kbd className="shortcut-hint">n</kbd>
           </button>
         </div>
       ) : (
@@ -141,7 +147,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               style={{ flexShrink: 0 }}
               aria-busy={busy}
             >
-              {busy ? 'Carica...' : 'Cambia'}
+              {busy ? 'Carica...' : 'Cambia'} <kbd className="shortcut-hint">n</kbd>
             </button>
           </div>
 
@@ -177,7 +183,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
               disabled={!!result || busy || !answer.trim()}
               style={{ flexShrink: 0 }}
             >
-              {busy ? 'Verifica...' : 'Verifica'}
+              {busy ? 'Verifica...' : 'Verifica'} <kbd className="shortcut-hint">&crarr;</kbd>
             </button>
           </form>
 
@@ -286,7 +292,7 @@ export default function ExerciseInput({ nodeId, level }: ExerciseInputProps) {
                 aria-expanded={showHints}
                 aria-controls="hints-list"
               >
-                {showHints ? '// nascondi suggerimenti' : `// mostra suggerimenti (${exercise.hints.length})`}
+                {showHints ? '// nascondi suggerimenti' : `// mostra suggerimenti (${exercise.hints.length})`} {!showHints && <kbd className="shortcut-hint">h</kbd>}
               </button>
               {showHints && (
                 <ul
