@@ -1,103 +1,100 @@
 # MathLingo
 
-App web open source stile Duolingo per la matematica. Dalle addizioni agli argomenti di quinta superiore, estendibile. Niente AI, tutto generato proceduralmente con validazione simbolica SymPy.
+App web open source stile Duolingo per la matematica. Dalle addizioni agli argomenti di quinta superiore. Niente AI, tutto generato proceduralmente con validazione simbolica SymPy. 28 nodi su 4 categorie.
 
 ## Stack
 
-- **Frontend**: Next.js 14 + React 18 + TypeScript
-- **Backend**: Python + FastAPI + SymPy + SQLite
+- **Frontend**: Next.js 14 + React 18 + TypeScript (static export su Netlify)
+- **Backend**: Python + FastAPI + SymPy + SQLite (su Railway)
 - **Autenticazione**: JWT + bcrypt
+- **Teoria**: Markdown + LaTeX via KaTeX
 
-## Requisiti
-
-- Python 3.10+
-- Node.js 18+
-
-## Avvio rapido
+## Avvio rapido (sviluppo locale)
 
 ### 1. Backend
 
 ```bash
-# Crea e attiva l'ambiente virtuale
 python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# oppure: venv\Scripts\activate  # Windows
-
-# Installa le dipendenze
+source venv/bin/activate
 pip install -r backend/requirements.txt
-
-# Avvia il server (hot-reload attivo)
 uvicorn backend.main:app --reload --port 8000
 ```
 
-Il backend è disponibile su `http://localhost:8000`.
-
 ### 2. Frontend
-
-In un altro terminale:
 
 ```bash
 cd frontend
-
-# Installa le dipendenze
 npm install
-
-# Avvia il dev server
-npm run dev
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
 ```
 
-Il frontend è disponibile su `http://localhost:3000`.
+Frontend su `http://localhost:3000`, backend su `http://localhost:8000`.
 
-> **Nota**: Il frontend si aspetta il backend su `http://localhost:8000`. Per cambiare URL, imposta la variabile d'ambiente `NEXT_PUBLIC_API_URL`.
+## Variabili d'ambiente (backend)
+
+| Variabile | Default | Obbligatoria |
+|-----------|---------|--------------|
+| `JWT_SECRET_KEY` | `dev-secret-key...` (insecure) | Sì in produzione |
+| `CORS_ORIGINS` | `http://localhost:3000` | Sì in produzione |
+| `DATABASE_PATH` | `backend/mathlingo.db` | No |
 
 ## Struttura del progetto
 
 ```
 mathlingo/
-├── frontend/                # Next.js App Router
+├── frontend/                  # Next.js (static export)
 │   ├── src/
-│   │   ├── app/             # Pagine (login, tree, node/[id])
-│   │   ├── components/      # LoginForm, SkillTree, NodeView, ExerciseInput
-│   │   └── lib/             # API client, auth context
-│   └── package.json
+│   │   ├── app/               # Route: /tree, /node/[id], /login, /placement
+│   │   ├── components/        # Navbar, SkillTree, NodeView, ExerciseInput, ecc.
+│   │   └── lib/               # API client, auth context, theme, hotkeys
+│   └── next.config.mjs        # output: 'export'
 │
 ├── backend/
-│   ├── main.py              # FastAPI, route, CORS
-│   ├── auth.py              # Registrazione, login, JWT
-│   ├── database.py          # SQLite (users, progress)
-│   ├── nodes/               # Generatori esercizi procedurali
-│   │   ├── base.py          # Classe astratta NodeGenerator
-│   │   ├── aritmetica/
-│   │   └── algebra/
-│   └── requirements.txt
+│   ├── main.py                # FastAPI, route, CORS, rate limiting
+│   ├── auth.py                # Registrazione, login, JWT
+│   ├── database.py            # SQLite con migrazioni automatiche
+│   └── nodes/                 # Generatori esercizi procedurali
+│       ├── aritmetica/        # 12 nodi
+│       ├── algebra/           # 9 nodi
+│       ├── geometria/         # 4 nodi
+│       └── probabilita/       # 3 nodi
 │
-├── content/nodes/           # Teoria in Markdown (in arrivo)
-├── skilltree.json           # Grafo della conoscenza (nodi + archi)
+├── content/nodes/             # 29 file .md con teoria + LaTeX
+├── skilltree.json             # Grafo: 4 macro, 28 nodi, 31 archi
+├── railway.json               # Config deploy Railway
+├── netlify.toml               # Config deploy Netlify
 └── README.md
 ```
 
 ## API
 
-| Metodo | Endpoint             | Auth | Descrizione                          |
-| ------ | -------------------- | ---- | ------------------------------------ |
-| GET    | `/`                  | No   | Root + lista nodi disponibili        |
-| POST   | `/auth/register`     | No   | Crea account (username + password)   |
-| POST   | `/auth/login`        | No   | Login, restituisce token JWT         |
-| GET    | `/skilltree`         | No   | Restituisce il grafo della conoscenza|
-| GET    | `/progress`          | Sì   | Progressi dell'utente                |
-| POST   | `/progress`          | Sì   | Aggiorna progressi                   |
-| POST   | `/exercise/generate` | Sì   | Genera esercizio (node_id, level)    |
-| POST   | `/exercise/validate` | Sì   | Valida risposta con SymPy            |
+| Metodo | Endpoint | Auth | Descrizione |
+|--------|----------|------|-------------|
+| GET | `/` | No | Root + lista nodi |
+| POST | `/auth/register` | No | Crea account (min 8 caratteri) |
+| POST | `/auth/login` | No | Login, restituisce token JWT |
+| GET | `/auth/me` | Sì | Info utente (username, placement_done) |
+| GET | `/skilltree` | No | Grafo della conoscenza (macro, nodi, archi) |
+| GET | `/content/{node_id}` | No | Teoria in Markdown |
+| GET | `/progress` | Sì | Progressi dell'utente |
+| POST | `/progress` | Sì | Aggiorna progressi (level 1-3, score 0-100) |
+| POST | `/exercise/generate` | Sì | Genera esercizio (node_id, level) |
+| POST | `/exercise/validate` | Sì | Valida risposta con SymPy |
+| POST | `/placement/start` | Sì | Avvia test di posizionamento (10 domande) |
+| POST | `/placement/answer` | Sì | Valida risposta singola del placement |
+| POST | `/placement/finish` | Sì | Conclude placement, pre-fill progressi |
 
 ## Aggiungere un nuovo argomento
 
-1. Crea il generatore Python in `backend/nodes/` (estendi `NodeGenerator`)
-2. Scrivi la teoria in `content/nodes/` (Markdown + LaTeX)
-3. Aggiungi il nodo a `skilltree.json`
+1. Crea il generatore in `backend/nodes/<categoria>/<nome>.py` (estendi `NodeGenerator`)
+2. Importalo in `backend/nodes/__init__.py`
+3. Scrivi la teoria in `content/nodes/<nome>.md`
+4. Aggiungi nodo + archi in `skilltree.json`
 
 Nessun altro file da toccare.
 
-## Hosting
+## Deploy
 
-- **Frontend**: GitHub Pages (o Vercel)
-- **Backend**: Render piano free (o qualsiasi host Python)
+- **Frontend**: build statico su Netlify (da `frontend/out/`)
+- **Backend**: Python FastAPI su Railway (SQLite persistente su `/data`)
+- **Trigger**: push su `main` → deploy automatico su entrambi
