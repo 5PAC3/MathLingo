@@ -5,17 +5,24 @@ import Navbar from '@/components/Navbar'
 import { useI18n } from '@/lib/i18n'
 import katex from 'katex'
 
-function renderFormula(formula: string): string {
+interface FormulaEntry {
+  nameKey: string
+  tex: string
+  texEn?: string
+}
+
+interface FormulaGroup {
+  titleKey: string
+  formulas: FormulaEntry[]
+}
+
+function renderFormula(entry: FormulaEntry, lang: string): string {
+  const formula = lang === 'en' && entry.texEn ? entry.texEn : entry.tex
   try {
     return katex.renderToString(formula, { throwOnError: false, displayMode: true })
   } catch {
     return formula
   }
-}
-
-interface FormulaGroup {
-  titleKey: string
-  formulas: { nameKey: string; tex: string }[]
 }
 
 const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[] = [
@@ -35,7 +42,7 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
       {
         titleKey: 'form.group.powers',
         formulas: [
-          { nameKey: 'form.name.definition', tex: 'a^n = a \\times a \\times \\ldots \\times a \\;(n\\text{ volte})' },
+          { nameKey: 'form.name.definition', tex: 'a^n = a \\times a \\times \\ldots \\times a \\;(n\\text{ volte})', texEn: 'a^n = a \\times a \\times \\ldots \\times a \\;(n\\text{ times})' },
           { nameKey: 'form.name.product', tex: 'a^n \\times a^m = a^{n+m}' },
           { nameKey: 'form.name.quotient', tex: 'a^n : a^m = a^{n-m}' },
           { nameKey: 'form.name.power_of_power', tex: '(a^n)^m = a^{n \\times m}' },
@@ -70,13 +77,13 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
         titleKey: 'form.group.percentages',
         formulas: [
           { nameKey: 'form.name.percentage_def', tex: 'p\\% = \\frac{p}{100}' },
-          { nameKey: 'form.name.percentage_calc', tex: '\\frac{p}{100} \\times \\text{totale}' },
+          { nameKey: 'form.name.percentage_calc', tex: '\\frac{p}{100} \\times \\text{totale}', texEn: '\\frac{p}{100} \\times \\text{total}' },
         ],
       },
       {
         titleKey: 'form.group.lcm_gcd',
         formulas: [
-          { nameKey: 'form.name.gcd', tex: '\\gcd(a,b) = \\text{massimo divisore comune}' },
+          { nameKey: 'form.name.gcd', tex: '\\gcd(a,b) = \\text{massimo divisore comune}', texEn: '\\gcd(a,b) = \\text{greatest common divisor}' },
           { nameKey: 'form.name.lcm', tex: '\\operatorname{lcm}(a,b) = \\frac{a \\times b}{\\gcd(a,b)}' },
         ],
       },
@@ -117,15 +124,15 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
           { nameKey: 'form.name.general_form', tex: 'ax^2 + bx + c = 0' },
           { nameKey: 'form.name.quadratic_formula', tex: 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}' },
           { nameKey: 'form.name.delta', tex: '\\Delta = b^2 - 4ac' },
-          { nameKey: 'form.name.delta_positive', tex: 'x_1 \\neq x_2 \\;\\text{(due soluzioni reali)}' },
+          { nameKey: 'form.name.delta_positive', tex: 'x_1 \\neq x_2 \\;\\text{(due soluzioni reali)}', texEn: 'x_1 \\neq x_2 \\;\\text{(two real solutions)}' },
           { nameKey: 'form.name.delta_zero', tex: 'x_1 = x_2 = -\\frac{b}{2a}' },
-          { nameKey: 'form.name.delta_negative', tex: '\\text{nessuna soluzione reale}' },
+          { nameKey: 'form.name.delta_negative', tex: '\\text{nessuna soluzione reale}', texEn: '\\text{no real solutions}' },
         ],
       },
       {
         titleKey: 'form.group.quadratic_inequalities',
         formulas: [
-          { nameKey: 'form.name.sign_rule', tex: 'ax^2 + bx + c > 0 \\implies \\text{segno di }a\\text{ fuori dalle radici}' },
+          { nameKey: 'form.name.sign_rule', tex: 'ax^2 + bx + c > 0 \\implies \\text{segno di }a\\text{ fuori dalle radici}', texEn: 'ax^2 + bx + c > 0 \\implies \\text{sign of }a\\text{ outside roots}' },
         ],
       },
       {
@@ -151,12 +158,12 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
       {
         titleKey: 'form.group.boolean_algebra',
         formulas: [
-          { nameKey: 'form.name.definition', tex: 'A \\land B = \\text{Vero solo se entrambi Vero}' },
-          { nameKey: 'form.name.product', tex: 'A \\lor B = \\text{Vero se almeno uno Vero}' },
-          { nameKey: 'form.name.negative_power', tex: '\\lnot A = \\text{inverte il valore}' },
+          { nameKey: 'form.name.definition', tex: 'A \\land B = \\text{Vero solo se entrambi Vero}', texEn: 'A \\land B = \\text{True only if both True}' },
+          { nameKey: 'form.name.product', tex: 'A \\lor B = \\text{Vero se almeno uno Vero}', texEn: 'A \\lor B = \\text{True if at least one True}' },
+          { nameKey: 'form.name.negative_power', tex: '\\lnot A = \\text{inverte il valore}', texEn: '\\lnot A = \\text{inverts the value}' },
           { nameKey: 'form.name.division', tex: '\\lnot(A \\land B)' },
           { nameKey: 'form.name.fraction_mul', tex: '\\lnot(A \\lor B)' },
-          { nameKey: 'form.name.subtraction', tex: 'A \\oplus B = \\text{Vero se diversi}' },
+          { nameKey: 'form.name.subtraction', tex: 'A \\oplus B = \\text{Vero se diversi}', texEn: 'A \\oplus B = \\text{True if different}' },
         ],
       },
     ],
@@ -196,8 +203,8 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
       {
         titleKey: 'form.group.trigonometry',
         formulas: [
-          { nameKey: 'form.name.sine', tex: '\\sin \\theta = \\frac{\\text{cateto opposto}}{\\text{ipotenusa}}' },
-          { nameKey: 'form.name.cosine', tex: '\\cos \\theta = \\frac{\\text{cateto adiacente}}{\\text{ipotenusa}}' },
+          { nameKey: 'form.name.sine', tex: '\\sin \\theta = \\frac{\\text{cateto opposto}}{\\text{ipotenusa}}', texEn: '\\sin \\theta = \\frac{\\text{opposite}}{\\text{hypotenuse}}' },
+          { nameKey: 'form.name.cosine', tex: '\\cos \\theta = \\frac{\\text{cateto adiacente}}{\\text{ipotenusa}}', texEn: '\\cos \\theta = \\frac{\\text{adjacent}}{\\text{hypotenuse}}' },
           { nameKey: 'form.name.tangent', tex: '\\tan \\theta = \\frac{\\sin \\theta}{\\cos \\theta}' },
           { nameKey: 'form.name.notable_values_30', tex: '\\sin 30^\\circ = \\frac{1}{2},\\; \\cos 30^\\circ = \\frac{\\sqrt{3}}{2}' },
           { nameKey: 'form.name.notable_values_45', tex: '\\sin 45^\\circ = \\cos 45^\\circ = \\frac{\\sqrt{2}}{2}' },
@@ -249,8 +256,8 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
       {
         titleKey: 'form.group.functions',
         formulas: [
-          { nameKey: 'form.name.domain_fraction', tex: '\\text{denominatore} \\neq 0' },
-          { nameKey: 'form.name.domain_even_root', tex: '\\text{radicando} \\geq 0' },
+          { nameKey: 'form.name.domain_fraction', tex: '\\text{denominatore} \\neq 0', texEn: '\\text{denominator} \\neq 0' },
+          { nameKey: 'form.name.domain_even_root', tex: '\\text{radicando} \\geq 0', texEn: '\\text{radicand} \\geq 0' },
           { nameKey: 'form.name.composition', tex: '(f \\circ g)(x) = f(g(x))' },
         ],
       },
@@ -299,7 +306,7 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
       {
         titleKey: 'form.group.probability',
         formulas: [
-          { nameKey: 'form.name.classical_def', tex: 'P(E) = \\frac{\\text{casi favorevoli}}{\\text{casi possibili}}' },
+          { nameKey: 'form.name.classical_def', tex: 'P(E) = \\frac{\\text{casi favorevoli}}{\\text{casi possibili}}', texEn: 'P(E) = \\frac{\\text{favorable cases}}{\\text{possible cases}}' },
           { nameKey: 'form.name.conditional_prob', tex: 'P(A|B) = \\frac{P(A \\cap B)}{P(B)}' },
           { nameKey: 'form.name.independent_events', tex: 'P(A \\cap B) = P(A) \\times P(B)' },
         ],
@@ -308,8 +315,8 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
         titleKey: 'form.group.statistics',
         formulas: [
           { nameKey: 'form.name.mean', tex: '\\bar{x} = \\frac{\\sum x_i}{n}' },
-          { nameKey: 'form.name.median', tex: '\\text{valore centrale dei dati ordinati}' },
-          { nameKey: 'form.name.mode', tex: '\\text{valore con frequenza maggiore}' },
+          { nameKey: 'form.name.median', tex: '\\text{valore centrale dei dati ordinati}', texEn: '\\text{central value of ordered data}' },
+          { nameKey: 'form.name.mode', tex: '\\text{valore con frequenza maggiore}', texEn: '\\text{value with highest frequency}' },
           { nameKey: 'form.name.variance', tex: '\\sigma^2 = \\frac{\\sum (x_i - \\bar{x})^2}{n}' },
           { nameKey: 'form.name.std_deviation', tex: '\\sigma = \\sqrt{\\sigma^2}' },
         ],
@@ -327,7 +334,7 @@ const SECTIONS: { categoryKey: string; color: string; groups: FormulaGroup[] }[]
 ]
 
 export default function FormularioPage() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
@@ -413,7 +420,7 @@ export default function FormularioPage() {
                         </div>
                         {mounted ? (
                           <div
-                            dangerouslySetInnerHTML={{ __html: renderFormula(f.tex) }}
+                            dangerouslySetInnerHTML={{ __html: renderFormula(f, lang) }}
                             style={{ fontSize: '0.95rem', lineHeight: 1.5 }}
                           />
                         ) : (
@@ -425,7 +432,7 @@ export default function FormularioPage() {
                               padding: '0.25rem 0',
                             }}
                           >
-                            {f.tex}
+                            {lang === 'en' && f.texEn ? f.texEn : f.tex}
                           </div>
                         )}
                       </div>
