@@ -3,11 +3,13 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 import { api, type SkillTreeData, type ProgressData, type SkillNode, type SkillEdge } from '@/lib/api'
 import SkillTree from '@/components/SkillTree'
 import Navbar from '@/components/Navbar'
 
 export default function MacroPage() {
+  const { t } = useI18n()
   const router = useRouter()
   const params = useParams()
   const macro = params.macro as string
@@ -75,7 +77,7 @@ export default function MacroPage() {
             marginBottom: '0.25rem',
           }}
         >
-          ← Panoramica
+          {t('btn.back_to_overview')}
         </button>
         <SkillTree
           nodes={filtered.nodes}

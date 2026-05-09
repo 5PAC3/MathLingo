@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 import { api, type SkillTreeData, type ProgressData } from '@/lib/api'
 import MacroTree from '@/components/MacroTree'
 import Navbar from '@/components/Navbar'
 
 export default function TreePage() {
+  const { t } = useI18n()
   const router = useRouter()
   const { user, placement_done, loading } = useAuth()
   const [mounted, setMounted] = useState(false)
@@ -57,10 +59,10 @@ export default function TreePage() {
             marginBottom: '0.25rem',
           }}
         >
-          Panoramica
+          {t('heading.overview')}
         </h1>
         <p className="text-muted mb-2" style={{ fontSize: '0.9rem' }}>
-          Scegli un macro-argomento per iniziare
+          {t('prompt.overview')}
         </p>
         <MacroTree
           macros={tree?.macros ?? []}

@@ -21,6 +21,7 @@
   "aria.show_password": "Show password",
   "aria.node_label": "{label} — {category}",
   "aria.node_completed": "{label} — {category} — Completed",
+  "aria.lang.switch": "Switch to Italian",
   "aria.progress": "Progress: {correct} correct out of {total} total",
   "nav.home": "MathLingo",
   "nav.formulary": "[formulas]",

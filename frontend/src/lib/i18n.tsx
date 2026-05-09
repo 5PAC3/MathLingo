@@ -27,6 +27,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLang = useCallback((l: Lang) => {
     localStorage.setItem('lang', l)
+    document.cookie = `lang=${l};path=/;max-age=31536000;SameSite=Lax`
     setLangState(l)
   }, [])
 

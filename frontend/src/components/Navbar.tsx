@@ -77,7 +77,7 @@ export default function Navbar() {
               <button
                 className="btn btn-sm btn-ghost"
                 onClick={() => setLang(lang === 'it' ? 'en' : 'it')}
-                aria-label={lang === 'it' ? 'Switch to English' : 'Passa a italiano'}
+                aria-label={t('aria.lang.switch')}
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.75rem',
