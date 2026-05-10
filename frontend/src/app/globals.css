@@ -697,3 +697,13 @@ input:focus-visible {
   .back-to-top { bottom: 1rem; right: 1rem; width: 36px; height: 36px; font-size: 1rem; }
   .nav-inner { height: 52px; }
 }
+
+.node-view-wrapper {
+  padding: 0.5rem 0;
+}
+
+@media (min-width: 769px) {
+  .node-view-wrapper {
+    padding: 0.5rem;
+  }
+}

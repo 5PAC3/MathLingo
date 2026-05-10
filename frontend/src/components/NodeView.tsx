@@ -187,7 +187,7 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
   const catLabel = category ? t(CATEGORY_LABELS[category] || category) : ''
 
   return (
-    <div style={{ padding: '0.5rem 0' }}>
+    <div className="node-view-wrapper">
       <div
         style={{
           display: 'flex',
