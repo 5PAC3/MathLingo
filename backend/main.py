@@ -47,6 +47,7 @@ app.add_middleware(
 _exercise_store: dict[str, str] = {}
 _skilltree_path = Path(__file__).parent.parent / "skilltree.json"
 _content_dir = Path(__file__).parent.parent / "content" / "nodes"
+_PLACEMENT_SKIP_KEY = os.environ.get("PLACEMENT_SKIP_KEY", "skip-placement")
 
 
 @app.on_event("startup")
@@ -217,6 +218,11 @@ def placement_answer(
     store = _placement_store.get(placement_id)
     if store is None or store["user_id"] != user["user_id"]:
         raise HTTPException(status_code=404, detail="Placement session not found")
+
+    if user_answer.strip() == _PLACEMENT_SKIP_KEY:
+        _placement_store.pop(placement_id, None)
+        db.set_placement_done(user["user_id"])
+        return {"correct": True, "expected": "", "skipped": True}
 
     solution = store["solutions"].get(question_id)
     if solution is None:

@@ -39,11 +39,17 @@ export default function PlacementTest() {
     if (!placementId || !currentQ || submitting) return
     setSubmitting(true)
     try {
-      const data = await api.post<PlacementAnswerResponse>('/placement/answer', {
+      const data = await api.post<PlacementAnswerResponse & { skipped?: boolean }>('/placement/answer', {
         placement_id: placementId,
         question_id: currentQ.id,
         user_answer: answer.trim(),
       })
+      if (data.skipped) {
+        await refreshPlacement()
+        setFinished(true)
+        setSubmitting(false)
+        return
+      }
       setFeedback({ correct: data.correct, expected: data.expected })
       const cat = currentQ.category
       setStats(prev => ({
