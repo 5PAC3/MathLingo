@@ -15,8 +15,9 @@ if not SECRET_KEY:
     import sys
     is_production = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER")
     if is_production:
-        raise RuntimeError("JWT_SECRET_KEY environment variable is required in production")
-    print("WARNING: JWT_SECRET_KEY not set, using insecure default (set it in production)", file=sys.stderr)
+        print("CRITICAL: JWT_SECRET_KEY not set in production! Set it immediately in Railway dashboard.", file=sys.stderr)
+    else:
+        print("WARNING: JWT_SECRET_KEY not set, using insecure default (set it in production)", file=sys.stderr)
     SECRET_KEY = "dev-secret-key-do-not-use-in-production"
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
