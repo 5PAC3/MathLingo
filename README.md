@@ -99,6 +99,11 @@ Nessun altro file da toccare.
 
 ## Hosting
 
-- **Frontend**: Netlify (o Vercel)
-- **Backend**: Railway (o qualsiasi host Python)
+- **Frontend**: build statico su Netlify (da `frontend/out/`) — o Vercel
+- **Backend**: Python FastAPI su Railway — auto-detection
 - **Database**: SQLite (locale) — per Railway serve volume persistente o migrazione a PostgreSQL
+- **Trigger**: push su `main` → deploy automatico su entrambi
+
+> ⚠️ **Non modificare `railway.json`** — Railway usa auto-detection per Python/FastAPI e il file
+> è configurato con `"deploy": {}` apposta. La build usa `--break-system-packages` per PEP 668.
+> Anche se sembra "vuoto" o "sbagliato", funziona. Non toccare.
