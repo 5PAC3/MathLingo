@@ -1,151 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
-import Link from 'next/link'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import katex from 'katex'
+import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 import { api, type SkillTreeData } from '@/lib/api'
 import { useHotkeys } from '@/lib/hotkeys'
 import ExerciseInput from './ExerciseInput'
-
-
-type Fragment =
-  | { t: 'text'; v: string }
-  | { t: 'bold'; v: string }
-  | { t: 'math'; v: string }
-
-const LATEX_SYMBOLS: Record<string, string> = {
-  '\\div': '÷',
-  '\\times': '×',
-  '\\pm': '±',
-  '\\mp': '∓',
-  '\\cdot': '·',
-  '\\neq': '≠',
-  '\\le': '≤',
-  '\\ge': '≥',
-  '\\to': '→',
-  '\\mapsto': '↦',
-  '\\forall': '∀',
-  '\\exists': '∃',
-  '\\in': '∈',
-  '\\notin': '∉',
-  '\\subset': '⊂',
-  '\\supset': '⊃',
-  '\\cup': '∪',
-  '\\cap': '∩',
-  '\\infty': '∞',
-  '\\partial': '∂',
-  '\\pi': 'π',
-  '\\cdots': '⋯',
-  '\\vdots': '⋮',
-  '\\ddots': '⋱',
-  '\\Longrightarrow': '⟹',
-  '\\implies': '⟹',
-  '\\Longleftrightarrow': '⟺',
-  '\\iff': '⟺',
-  '\\Leftrightarrow': '⇔',
-  '\\Rightarrow': '⇒',
-  '\\leftarrow': '←',
-  '\\rightarrow': '→',
-  '\\leftrightarrow': '↔',
-  '\\approx': '≈',
-  '\\equiv': '≡',
-  '\\cdotp': '·',
-  '\\ldots': '…',
-  '\\quad': '  ',
-  '\\qquad': '    ',
-}
-
-const LATEX_BRACED: [RegExp, string][] = [
-  [/\\text\{([^}]*)\}/g, '$1'],
-  [/\\underbrace\{([^}]*)\}_\{([^}]*)\}/g, '$1 ($2)'],
-  [/\\overbrace\{([^}]*)\}^\{([^}]*)\}/g, '$1 ($2)'],
-  [/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2'],
-  [/\\sqrt\{([^}]*)\}/g, '√($1)'],
-  [/\\sqrt\[(\d+)\]\{([^}]*)\}/g, '$1√($2)'],
-]
-
-function latexToText(math: string): string {
-  let s = math
-  for (const [cmd, sym] of Object.entries(LATEX_SYMBOLS)) {
-    s = s.replaceAll(cmd, sym)
-  }
-  for (const [re, repl] of LATEX_BRACED) {
-    s = s.replace(re, repl)
-  }
-  return s
-}
-
-function renderMath(expr: string, displayMode: boolean): { __html: string } {
-  try {
-    return {
-      __html: katex.renderToString(expr, {
-        displayMode,
-        throwOnError: false,
-        output: 'html',
-      }),
-    }
-  } catch {
-    return { __html: latexToText(expr) }
-  }
-}
-
-function renderInline(text: string): ReactNode[] {
-  const fragments: Fragment[] = []
-  let s = text
-  while (s.length > 0) {
-    const bold = s.match(/^\*\*(.+?)\*\*/)
-    if (bold) { fragments.push({ t: 'bold', v: bold[1] }); s = s.slice(bold[0].length); continue }
-    const math = s.match(/^\$(.+?)\$/)
-    if (math) { fragments.push({ t: 'math', v: math[1] }); s = s.slice(math[0].length); continue }
-    const next = s.search(/\*\*|\$/)
-    if (next === -1) { fragments.push({ t: 'text', v: s }); break }
-    if (next > 0) { fragments.push({ t: 'text', v: s.slice(0, next) }); s = s.slice(next); continue }
-    fragments.push({ t: 'text', v: s[0] }); s = s.slice(1)
-  }
-  return fragments.map((f, i) => {
-    if (f.t === 'bold') return <strong key={i}>{f.v}</strong>
-    if (f.t === 'math') return <span key={i} dangerouslySetInnerHTML={renderMath(f.v, false)} />
-    return f.v
-  })
-}
-
-function renderLine(line: string, i: number): ReactNode | null {
-  const trim = line.trim()
-  if (trim === '') return <br key={i} />
-
-  if (trim.startsWith('#')) {
-    const level = trim.match(/^#{1,3}/)?.[0].length || 1
-    const text = trim.replace(/^#+\s*/, '')
-    if (level === 1) return <h2 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--fg)', marginTop: '1rem', marginBottom: '0.5rem' }}>{renderInline(text)}</h2>
-    if (level === 2) return <h3 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 600, color: 'var(--fg)', marginTop: '0.75rem', marginBottom: '0.35rem' }}>{renderInline(text)}</h3>
-    return <h4 key={i} style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--fg)', marginTop: '0.5rem', marginBottom: '0.25rem' }}>{renderInline(text)}</h4>
-  }
-
-  if (line.startsWith('- ') || line.startsWith('* ')) {
-    return <li key={i} style={{ marginLeft: '1.2rem', marginBottom: '0.15rem' }}>{renderInline(line.slice(2))}</li>
-  }
-
-  if (trim.startsWith('$$') && trim.endsWith('$$')) {
-    const math = trim.slice(2, -2)
-    return (
-      <div
-        key={i}
-        style={{
-          textAlign: 'center',
-          padding: '0.6rem 0',
-          margin: '0.5rem 0',
-        }}
-        dangerouslySetInnerHTML={renderMath(math, true)}
-      />
-    )
-  }
-
-  if (line.includes('|') && line.includes('-') && line.includes('|')) return null
-  if (line.startsWith('|')) return <p key={i} style={{ marginBottom: '0.2rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{line}</p>
-
-  return <p key={i} style={{ marginBottom: '0.35rem' }}>{renderInline(line)}</p>
-}
+import katex from 'katex'
 
 interface NodeViewProps {
   nodeId: string
@@ -153,25 +15,122 @@ interface NodeViewProps {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  aritmetica: 'Aritmetica',
-  algebra: 'Algebra',
-    informatica: 'Informatica',
-    geometria: 'Geometria',
-    probabilita: 'Probabilit\u00e0',
+  aritmetica: 'cat.aritmetica',
+  algebra: 'cat.algebra',
+  logica: 'cat.logica',
+  informatica: 'cat.informatica',
+  geometria: 'cat.geometria',
+  'geometria-analitica': 'cat.geometria_analitica',
+  analisi: 'cat.analisi',
+  probabilita: 'cat.probabilita',
 }
 
 function categoryColor(cat: string): string {
   const vars: Record<string, string> = {
     aritmetica: 'var(--cat-aritmetica)',
     algebra: 'var(--cat-algebra)',
+    logica: 'var(--cat-logica)',
     informatica: 'var(--cat-informatica)',
     geometria: 'var(--cat-geometria)',
+    'geometria-analitica': 'var(--cat-geometria-analitica)',
+    analisi: 'var(--cat-analisi)',
     probabilita: 'var(--cat-probabilita)',
   }
   return vars[cat] || 'var(--primary)'
 }
 
+function renderInline(text: string): string {
+  let html = text
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  html = html.replace(/\$([^\$]+)\$/g, (_, formula) => {
+    try {
+      return katex.renderToString(formula, { throwOnError: false, displayMode: false })
+    } catch {
+      return formula
+    }
+  })
+  return html
+}
+
+function renderLine(line: string) {
+  if (line.startsWith('$$') && line.endsWith('$$') && line.length > 4) {
+    const formula = line.slice(2, -2).trim()
+    try {
+      return <div dangerouslySetInnerHTML={{ __html: katex.renderToString(formula, { throwOnError: false, displayMode: true }) }} />
+    } catch {
+      return <pre>{line}</pre>
+    }
+  }
+  return <span dangerouslySetInnerHTML={{ __html: renderInline(line) }} />
+}
+
+function renderContent(markdown: string) {
+  const lines = markdown.split('\n')
+  const elements: React.ReactNode[] = []
+  let inLatexBlock = false
+  let latexBuffer: string[] = []
+
+  lines.forEach((line, i) => {
+    if (line.startsWith('$$')) {
+      if (inLatexBlock) {
+        latexBuffer.push(line.slice(2).trim())
+        const formula = latexBuffer.join(' ')
+        try {
+          elements.push(<div key={i} dangerouslySetInnerHTML={{ __html: katex.renderToString(formula, { throwOnError: false, displayMode: true }) }} />)
+        } catch {
+          elements.push(<pre key={i}>{latexBuffer.join('\n')}</pre>)
+        }
+        latexBuffer = []
+        inLatexBlock = false
+      } else {
+        const rest = line.slice(2).trim()
+        if (rest.endsWith('$$')) {
+          const formula = rest.slice(0, -2).trim()
+          try {
+            elements.push(<div key={i} dangerouslySetInnerHTML={{ __html: katex.renderToString(formula, { throwOnError: false, displayMode: true }) }} />)
+          } catch {
+            elements.push(<pre key={i}>{line}</pre>)
+          }
+        } else {
+          if (rest) {
+            latexBuffer.push(rest)
+          }
+          inLatexBlock = true
+        }
+      }
+      return
+    }
+    if (inLatexBlock) {
+      latexBuffer.push(line.trim())
+      return
+    }
+
+    if (line.startsWith('# ')) {
+      elements.push(<h1 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 800, marginTop: '1rem', marginBottom: '0.75rem' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(2)) }} />)
+    } else if (line.startsWith('## ')) {
+      elements.push(<h2 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem', fontWeight: 700, marginTop: '1rem', marginBottom: '0.5rem' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(3)) }} />)
+    } else if (line.startsWith('### ')) {
+      elements.push(<h3 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', fontWeight: 600, marginTop: '0.75rem', marginBottom: '0.4rem' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(4)) }} />)
+    } else if (line.startsWith('- ')) {
+      elements.push(<li key={i} style={{ marginLeft: '1.5rem', marginBottom: '0.2rem' }}>{renderLine(line.slice(2))}</li>)
+    } else if (line.startsWith('| ')) {
+      if (i === 0 || !lines[i - 1].startsWith('| ')) {
+        elements.push(<pre key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', background: 'var(--bg-alt)', padding: '0.5rem', borderRadius: 'var(--radius-sm)', overflowX: 'auto' }}>{lines.slice(i).filter(l => l.startsWith('|')).join('\n')}</pre>)
+      }
+    } else if (line.trim() === '') {
+      elements.push(<div key={i} style={{ height: '0.5rem' }} />)
+    } else {
+      elements.push(<p key={i} style={{ lineHeight: 1.7, margin: '0.25rem 0' }}>{renderLine(line)}</p>)
+    }
+  })
+
+  return elements
+}
+
 export default function NodeView({ nodeId, onBack }: NodeViewProps) {
+  const { t } = useI18n()
   const router = useRouter()
   const [tree, setTree] = useState<SkillTreeData | null>(null)
   const [theory, setTheory] = useState<string | null>(null)
@@ -182,7 +141,7 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
-    api.get<SkillTreeData>('/skilltree').then(setTree)
+    api.get<SkillTreeData>('/skilltree').then(setTree).catch(() => console.error('Failed to fetch skilltree'))
     api
       .get<{ content: string }>(`/content/${nodeId}`)
       .then(res => {
@@ -225,133 +184,158 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const color = nodeInfo ? categoryColor(nodeInfo.category) : 'var(--primary)'
-  const nodeLabel = nodeInfo?.label || nodeId
+  const catLabel = category ? t(CATEGORY_LABELS[category] || category) : ''
 
   return (
-    <>
-      <div className="container" style={{ paddingTop: '0.5rem' }}>
-        <nav aria-label="Breadcrumb" className="breadcrumb">
-          <Link href="/tree">Panoramica</Link>
-          <span aria-hidden="true">/</span>
-          {category && (
-            <>
-              <Link href={`/tree/${category}`}>
-                {CATEGORY_LABELS[category] || category}
-              </Link>
-              <span aria-hidden="true">/</span>
-            </>
-          )}
-          {view === 'exercise' && (
-            <>
-              <button
-                onClick={() => setView('theory')}
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.8rem',
-                  color: 'var(--fg-muted)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  textDecoration: 'none',
-                }}
-              >
-                {nodeLabel}
-              </button>
-              <span aria-hidden="true">/</span>
-            </>
-          )}
-          <span aria-current="page">{view === 'theory' ? nodeLabel : 'Esercizi'}</span>
-        </nav>
-
-        {nodeInfo && (
-          <div className="card mb-2" style={{ borderLeft: `4px solid ${color}` }}>
-            <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-              <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, flexShrink: 0 }} />
-              <h1 ref={headingRef} tabIndex={-1} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700 }}>
-                {nodeInfo.label}
-              </h1>
-              <span className="badge" style={{ background: `${color}18`, color }}>
-                {CATEGORY_LABELS[nodeInfo.category] || nodeInfo.category}
-              </span>
-            </div>
-            <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
-              {nodeInfo.description}
-            </p>
-          </div>
-        )}
-
-        {view === 'theory' ? (
+    <div className="node-view-wrapper">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.78rem',
+          color: 'var(--fg-muted)',
+          marginBottom: '0.75rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <button
+          className="btn-ghost btn-sm"
+          onClick={() => router.push('/tree')}
+          style={{ fontSize: '0.78rem', padding: 0, color: 'var(--primary)' }}
+        >
+          {t('breadcrumb.overview')}
+        </button>
+        <span>/</span>
+        {category && (
           <>
-            <div className="card mb-2 double-border">
-              {theory ? (
-                <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.8, color: 'var(--fg-muted)', fontSize: '0.92rem' }}>
-                  {theory.split('\n').map((line, i) => renderLine(line, i))}
-                </div>
-              ) : theoryError ? (
-                <p className="text-muted">Teoria non disponibile per questo nodo.</p>
-              ) : (
-                <div className="spinner" />
-              )}
-            </div>
+            <button
+              className="btn-ghost btn-sm"
+              onClick={() => router.push(`/tree/${category}`)}
+              style={{ fontSize: '0.78rem', padding: 0, color: 'var(--primary)' }}
+            >
+              {catLabel}
+            </button>
+            <span>/</span>
+          </>
+        )}
+        <span style={{ fontWeight: 600, color: 'var(--fg)' }}>{nodeInfo?.label || nodeId}</span>
+        <span>/</span>
+        <span>{view === 'theory' ? t('breadcrumb.theory') : t('breadcrumb.exercises')}</span>
+      </div>
 
-            <div className="text-center" style={{ marginBottom: '1rem' }}>
+      {nodeInfo && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '1rem',
+          }}
+        >
+          <div
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: categoryColor(category || ''),
+              flexShrink: 0,
+            }}
+          />
+          <span
+            ref={headingRef}
+            tabIndex={-1}
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '1.2rem',
+              fontWeight: 700,
+              outline: 'none',
+            }}
+          >
+            {nodeInfo.label}
+          </span>
+        </div>
+      )}
+
+      {view === 'theory' && (
+        <div>
+          {theoryError && (
+            <div className="card" style={{ borderLeft: '4px solid var(--danger)', padding: '1rem' }}>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: 'var(--danger-fg)', margin: 0 }}>
+                {t('error.theory_not_found')}
+              </p>
+            </div>
+          )}
+          {theory && !theoryError && (
+            <div
+              className="card"
+              style={{
+                padding: '1.25rem',
+                borderLeft: `4px solid ${categoryColor(category || '')}`,
+                fontSize: '0.92rem',
+                lineHeight: 1.7,
+              }}
+            >
+              {renderContent(theory)}
+            </div>
+          )}
+
+          {!theoryError && (
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
               <button
                 className="btn"
                 onClick={() => setView('exercise')}
-                disabled={!theory && !theoryError}
-                style={{ fontSize: '1rem', padding: '0.75rem 2rem' }}
+                style={{ fontSize: '0.9rem' }}
               >
-                Vai agli esercizi → <kbd className="shortcut-hint">e</kbd>
+                {t('btn.exercises')}
+                <span className="key-hint" style={{ marginLeft: '0.4rem' }}>{t('key_hint.e')}</span>
               </button>
             </div>
-          </>
-        ) : (
-          <>
-            <div className="text-center mb-2">
+          )}
+        </div>
+      )}
+
+      {view === 'exercise' && (
+        <div>
+          <div className="flex items-center gap-2" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => setView('theory')}
+              style={{ fontSize: '0.82rem' }}
+            >
+              <span className="key-hint">{t('key_hint.t')}</span> {t('btn.theory')}
+            </button>
+
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--fg-muted)', marginLeft: '0.5rem' }}>
+              {t('aria.difficulty')}:
+            </span>
+            {[1, 2, 3].map(l => (
               <button
-                className="btn btn-sm btn-ghost"
-                onClick={() => setView('theory')}
-                style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}
+                key={l}
+                className={`btn btn-sm ${level === l ? '' : 'btn-ghost'}`}
+                onClick={() => setLevel(l)}
+                aria-pressed={level === l}
+                style={{ fontSize: '0.8rem' }}
               >
-                ← Torna alla teoria <kbd className="shortcut-hint">t</kbd>
+                <span className="key-hint">{l}</span> {t('level.label', { n: l })}
               </button>
-            </div>
+            ))}
+          </div>
 
-            <div className="card">
-              <div className="flex items-center justify-between mb-2" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-                <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 700 }}>
-                  Esercizi
-                </h2>
-                <div className="flex gap-1" role="tablist" aria-label="Livello di difficoltà">
-                  {[1, 2, 3].map(l => (
-                    <button
-                      key={l}
-                      role="tab"
-                      aria-selected={level === l}
-                      className={`btn btn-sm ${level === l ? 'btn' : 'btn-outline'}`}
-                      onClick={() => setLevel(l)}
-                      style={{ gap: '0.2rem' }}
-                    >
-                      Liv. {l} <kbd className="shortcut-hint">{l}</kbd>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <ExerciseInput key={`${nodeId}-${level}`} nodeId={nodeId} level={level} />
-            </div>
-          </>
-        )}
-      </div>
+          <ExerciseInput nodeId={nodeId} level={level} />
+        </div>
+      )}
 
-      <button
-        className={`back-to-top ${showBackToTop ? 'visible' : ''}`}
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        aria-label="Torna all'inizio"
-      >
-        ↑
-      </button>
-    </>
+      {showBackToTop && (
+        <button
+          className="back-to-top visible"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label={t('aria.back_to_top')}
+        >
+          ↑
+        </button>
+      )}
+    </div>
   )
 }

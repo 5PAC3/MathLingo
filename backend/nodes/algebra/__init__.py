@@ -7,3 +7,6 @@ from . import equazioni_secondo_grado  # noqa: F401
 from . import sistemi_lineari  # noqa: F401
 from . import disequazioni  # noqa: F401
 from . import equazioni_fratte  # noqa: F401
+from . import scomposizione_polinomi  # noqa: F401
+from . import divisione_polinomi  # noqa: F401
+from . import disequazioni_secondo_grado  # noqa: F401

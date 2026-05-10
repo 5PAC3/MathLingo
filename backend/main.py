@@ -4,6 +4,7 @@ import os
 import random
 import sqlite3
 import time
+from collections import defaultdict
 from pathlib import Path
 
 import sympy as sp
@@ -166,8 +167,8 @@ def placement_start(user: dict = Depends(auth.get_current_user)):
     for n in nodes:
         by_cat.setdefault(n["category"], []).append(n["id"])
 
-    cat_order = ["aritmetica", "algebra", "geometria", "probabilita"]
-    cat_counts = [3, 3, 2, 2]
+    cat_order = ["aritmetica", "algebra", "geometria", "logica", "geometria-analitica", "analisi", "probabilita"]
+    cat_counts = [2, 2, 1, 1, 1, 1, 2]
     selected: list[tuple[str, str]] = []
     for cat, count in zip(cat_order, cat_counts):
         pool = by_cat.get(cat, [])
@@ -266,7 +267,6 @@ def placement_finish(
         if correct:
             cat_correct[cat] = cat_correct.get(cat, 0) + 1
 
-    from collections import defaultdict
     by_cat: dict[str, list[dict]] = defaultdict(list)
     for n in nodes:
         by_cat[n["category"]].append(n)
@@ -286,8 +286,8 @@ def placement_finish(
                     user["user_id"],
                     n["id"],
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"[placement] Failed to insert progress for node {n['id']}: {exc}")
 
     db.set_placement_done(user["user_id"])
 

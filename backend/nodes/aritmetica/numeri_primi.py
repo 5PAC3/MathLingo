@@ -13,7 +13,7 @@ _PRIMES_100 = [
 
 class NumeriPrimiGenerator(NodeGenerator):
     def generate(self, level: int) -> Exercise:
-        template = random.choice(["fattorizza", "e_primo", "fattori_comuni"] if level > 1 else ["e_primo"])
+        template = random.choice(["fattorizza", "e_primo"] if level > 1 else ["e_primo"])
 
         if level == 1:
             if random.choice([True, False]):
@@ -56,7 +56,17 @@ class NumeriPrimiGenerator(NodeGenerator):
                         solution=sol,
                         hints=[f"Dividi {n} per il numero primo più piccolo possibile."],
                     )
-                case _:
+                case t:
+                    n = random.randint(2, 6) * random.randint(2, 6)
+                    factors = []
+                    temp = n
+                    for p in _PRIMES_100:
+                        while temp % p == 0:
+                            factors.append(str(p))
+                            temp //= p
+                        if temp == 1:
+                            break
+                    sol = " × ".join(factors)
                     return Exercise(
                         question=f"Scomponi {n} in fattori primi (es. 12 = 2 × 2 × 3)",
                         solution=sol,

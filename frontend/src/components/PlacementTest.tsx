@@ -1,280 +1,211 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 import { api, type PlacementStartResponse, type PlacementAnswerResponse, type PlacementFinishResponse } from '@/lib/api'
 
-type Phase = 'loading' | 'answering' | 'feedback' | 'finishing' | 'done'
-
 export default function PlacementTest() {
+  const { t } = useI18n()
   const router = useRouter()
   const { refreshPlacement } = useAuth()
-  const [phase, setPhase] = useState<Phase>('loading')
-  const [placementId, setPlacementId] = useState('')
+  const [placementId, setPlacementId] = useState<string | null>(null)
   const [questions, setQuestions] = useState<PlacementStartResponse['questions']>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [answer, setAnswer] = useState('')
-  const [result, setResult] = useState<PlacementAnswerResponse | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [stats, setStats] = useState({ correct: 0, total: 0 })
-  const [finishStats, setFinishStats] = useState<PlacementFinishResponse['stats'] | null>(null)
+  const [feedback, setFeedback] = useState<{ correct: boolean; expected: string } | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [stats, setStats] = useState<Record<string, { correct: number; total: number }>>({})
+  const [finished, setFinished] = useState(false)
   const [finishError, setFinishError] = useState(false)
-  const finishingRef = useRef(false)
+  const [loading, setLoading] = useState(true)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     api.post<PlacementStartResponse>('/placement/start', {}).then(data => {
       setPlacementId(data.placement_id)
       setQuestions(data.questions)
-      setPhase('answering')
-    }).catch(err => {
-      setError(err instanceof Error ? err.message : 'Errore')
-      setPhase('done')
+      setLoading(false)
+    }).catch(() => {
+      setLoading(false)
     })
   }, [])
 
-  useEffect(() => {
-    if (phase === 'answering') {
-      inputRef.current?.focus()
-    }
-  }, [phase, currentIdx])
-
-  const current = questions[currentIdx]
+  const currentQ = questions[currentIdx]
   const totalQuestions = questions.length
-  const progressPct = totalQuestions > 0 ? (currentIdx / totalQuestions) * 100 : 0
-  const isLast = currentIdx >= totalQuestions - 1
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!current || busy) return
-    setBusy(true)
-    setError('')
+  const handleSubmit = useCallback(async () => {
+    if (!placementId || !currentQ || submitting) return
+    setSubmitting(true)
     try {
-      const res = await api.post<PlacementAnswerResponse>('/placement/answer', {
+      const data = await api.post<PlacementAnswerResponse>('/placement/answer', {
         placement_id: placementId,
-        question_id: current.id,
-        user_answer: answer,
+        question_id: currentQ.id,
+        user_answer: answer.trim(),
       })
-      setResult(res)
-      const newTotal = stats.total + 1
-      const newCorrect = stats.correct + (res.correct ? 1 : 0)
-      setStats({ correct: newCorrect, total: newTotal })
-      setPhase('feedback')
+      setFeedback({ correct: data.correct, expected: data.expected })
+      const cat = currentQ.category
+      setStats(prev => ({
+        ...prev,
+        [cat]: {
+          correct: (prev[cat]?.correct ?? 0) + (data.correct ? 1 : 0),
+          total: (prev[cat]?.total ?? 0) + 1,
+        },
+      }))
       setTimeout(() => {
-        setPhase('answering')
-        setResult(null)
-        setAnswer('')
-        if (isLast) {
-          setPhase('finishing')
-          finishPlacement()
-        } else {
+        if (currentIdx < totalQuestions - 1) {
           setCurrentIdx(i => i + 1)
+          setFeedback(null)
+          setAnswer('')
+          inputRef.current?.focus()
+        } else {
+          finishPlacement()
         }
-      }, res.correct ? 800 : 1500)
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Errore')
-      setBusy(false)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const finishPlacement = useCallback(() => {
-    if (finishingRef.current) return
-    finishingRef.current = true
-    setFinishError(false)
-    api.post<PlacementFinishResponse>('/placement/finish', {
-      placement_id: placementId,
-    }).then(finishRes => {
-      setFinishStats(finishRes.stats)
-      refreshPlacement()
-      setPhase('done')
-    }).catch(() => {
-      finishingRef.current = false
+      }, 800)
+    } catch {
       setFinishError(true)
-      setPhase('done')
-    })
+    }
+    setSubmitting(false)
+  }, [placementId, currentQ, answer, submitting, currentIdx, totalQuestions])
+
+  const finishPlacement = useCallback(async () => {
+    if (!placementId) return
+    try {
+      await api.post<PlacementFinishResponse>('/placement/finish', { placement_id: placementId })
+      await refreshPlacement()
+      setFinished(true)
+    } catch {
+      setFinishError(true)
+    }
   }, [placementId, refreshPlacement])
 
-  const goToTree = useCallback(() => {
-    router.push('/tree')
-  }, [router])
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (!feedback) handleSubmit()
+    }
+  }, [handleSubmit, feedback])
 
-  if (phase === 'loading') {
+  if (loading) {
     return (
-      <div className="container" style={{ paddingTop: '2rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-          Test di posizionamento
-        </h1>
-        <p className="text-muted">Preparazione delle domande...</p>
-        <div className="spinner" style={{ marginTop: '1rem' }} />
+      <div className="container" style={{ padding: '3rem 0', textAlign: 'center' }}>
+        <div className="spinner" />
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--fg-muted)', marginTop: '1rem' }}>
+          {t('prompt.placement.preparing')}
+        </p>
       </div>
     )
   }
 
-  if (phase === 'done') {
+  if (finishError) {
     return (
-      <div className="container" style={{ paddingTop: '2rem' }}>
+      <div className="container" style={{ padding: '3rem 0', textAlign: 'center' }}>
         <div className="card" style={{ padding: '2rem' }}>
-          <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, marginBottom: '1rem' }}>
-            {finishStats ? 'Test completato!' : 'Test di posizionamento'}
-          </h1>
-
-          {finishStats ? (
-            <>
-              <p className="mb-2">
-                Hai risposto correttamente a <strong>{stats.correct}/{stats.total}</strong> domande.
-              </p>
-              <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                {Object.entries(finishStats).map(([cat, s]) => (
-                  <div key={cat} className="flex items-center gap-2 mb-1" style={{ fontSize: '0.9rem' }}>
-                    <span style={{ fontWeight: 600, minWidth: 120 }}>{cat}:</span>
-                    <div className="progress-bar-bg" style={{ flex: 1, maxWidth: 200 }}>
-                      <div
-                        className="progress-bar-fill"
-                        style={{ width: `${s.total > 0 ? (s.correct / s.total) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="text-muted" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                      {s.correct}/{s.total}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-muted mb-2" style={{ fontSize: '0.9rem' }}>
-                I nodi che conosci già sono stati segnati come completati.
-                Puoi iniziare da dove preferisci.
-              </p>
-            </>
-          ) : finishError ? (
-            <div>
-              <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>Errore durante il salvataggio del test.</p>
-              <div className="flex gap-2" style={{ gap: '0.5rem' }}>
-                <button className="btn" onClick={finishPlacement} style={{ padding: '0.75rem 1.5rem' }}>
-                  Riprova
-                </button>
-                <button className="btn btn-outline" onClick={goToTree} style={{ padding: '0.75rem 1.5rem' }}>
-                  Salta
-                </button>
-              </div>
-            </div>
-          ) : error ? (
-            <div>
-              <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</p>
-            </div>
-          ) : null}
-
-          {!finishError && (
-            <button className="btn" onClick={goToTree} style={{ fontSize: '1rem', padding: '0.75rem 2rem' }}>
-              Vai allo Skill Tree →
-            </button>
-          )}
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: 'var(--danger-fg)' }}>
+            {t('prompt.placement.error')}
+          </p>
+          <button className="btn" onClick={finishPlacement} style={{ marginTop: '1rem' }}>
+            {t('btn.retry')}
+          </button>
         </div>
       </div>
     )
   }
 
-  if (!current) return null
+  if (finished) {
+    const totalCorrect = Object.values(stats).reduce((acc, s) => acc + s.correct, 0)
+    const totalTotal = Object.values(stats).reduce((acc, s) => acc + s.total, 0)
+    return (
+      <div className="container" style={{ padding: '1rem 0' }}>
+        <div className="card" style={{ padding: '1.5rem', textAlign: 'center', borderLeft: '4px solid var(--success)' }}>
+          <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, marginTop: 0 }}>
+            {t('prompt.placement.completed')}
+          </h1>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: 'var(--fg-muted)' }}>
+            {t('prompt.placement.summary', { correct: totalCorrect, total: totalTotal })}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center', margin: '1rem 0' }}>
+            {Object.entries(stats).map(([cat, s]) => (
+              <div key={cat} className="card" style={{ padding: '0.75rem', flex: '1 1 120px', minWidth: 100 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>{t(`cat.${cat}`, {}) || cat}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 700, marginTop: '0.3rem' }}>
+                  {t('prompt.placement.score', { correct: s.correct, total: s.total })}
+                </div>
+                <div className="progress-bar" style={{ marginTop: '0.3rem', height: 4 }}>
+                  <div className="progress-fill" style={{ width: `${s.total > 0 ? (s.correct / s.total) * 100 : 0}%`, height: 4 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--fg-muted)', whiteSpace: 'pre-line' }}>
+            {t('prompt.placement.info')}
+          </p>
+          <button className="btn" onClick={() => router.push('/tree')} style={{ marginTop: '1rem' }}>
+            {t('btn.go_to_tree')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentQ) return null
 
   return (
-    <div className="container" style={{ paddingTop: '2rem' }}>
-      <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-        Test di posizionamento
-      </h1>
-      <p className="text-muted mb-2" style={{ fontSize: '0.85rem' }}>
-        Rispondi a {totalQuestions} domande per valutare il tuo livello
-      </p>
-
-      <div
-        className="progress-bar-bg"
-        role="progressbar"
-        aria-valuenow={Math.round(progressPct)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        style={{ marginBottom: '1.5rem' }}
-      >
-        <div className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
-      </div>
-
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="badge" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-            {currentIdx + 1}/{totalQuestions}
-          </span>
-          <span className="text-muted" style={{ fontSize: '0.8rem' }}>
-            {stats.correct}/{stats.total} corrette
-          </span>
-        </div>
-
-        <p style={{ fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.5, marginBottom: '1rem' }}>
-          {current.question}
+    <div className="container" style={{ padding: '1rem 0' }}>
+      <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+        <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700 }}>
+          {t('heading.placement')}
+        </h1>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>
+          {t('prompt.placement', { total: totalQuestions })}
         </p>
-
-        <form onSubmit={handleSubmit} className="exercise-form" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-          <label htmlFor="placement-answer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
-            La tua risposta
-          </label>
-          <div className="terminal-input-wrapper">
-            <span className="terminal-prompt" aria-hidden="true">$</span>
-            <input
-              id="placement-answer"
-              ref={inputRef}
-              value={answer}
-              onChange={e => setAnswer(e.target.value)}
-              placeholder="x = ..."
-              disabled={phase === 'feedback' || busy}
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </div>
-          <button
-            type="submit"
-            className="btn"
-            disabled={phase === 'feedback' || busy || !answer.trim()}
-            style={{ flexShrink: 0 }}
-          >
-            {busy ? 'Verifica...' : 'Verifica'}
-          </button>
-        </form>
-
-        <style>{`
-          @media (max-width: 480px) {
-            .exercise-form {
-              flex-direction: column;
-            }
-            .exercise-form .terminal-input-wrapper {
-              width: 100%;
-            }
-            .exercise-form button {
-              width: 100%;
-            }
-          }
-        `}</style>
-
-        {error && (
-          <p style={{ color: 'var(--danger)', marginTop: '0.5rem', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>
-            {error}
-          </p>
-        )}
-
-        {phase === 'feedback' && result && (
-          <div
-            role="status"
-            aria-live="polite"
-            className={result.correct ? 'pass' : 'fail'}
-            style={{ marginTop: '0.75rem' }}
-          >
-            <p>{result.correct ? 'PASS' : 'FAIL'}</p>
-            {!result.correct && (
-              <p className="fail-detail">
-                expected: <strong>{result.expected}</strong>
-              </p>
-            )}
-          </div>
-        )}
       </div>
+
+      <div className="progress-bar" style={{ marginBottom: '1.5rem' }}>
+        <div className="progress-fill" style={{ width: `${(currentIdx / totalQuestions) * 100}%` }} />
+      </div>
+
+      <div className="card" style={{ padding: '1.25rem', fontFamily: 'var(--font-mono)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '1rem' }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginBottom: '0.5rem' }}>
+          {t(`cat.${currentQ.category}`)} — {t('level.label', { n: currentQ.level })}
+        </div>
+        <div style={{ whiteSpace: 'pre-wrap' }}>{currentQ.question}</div>
+      </div>
+
+      <div className="flex items-center gap-2" style={{ marginBottom: '0.75rem' }}>
+        <div className="terminal-input-wrapper" style={{ flex: 1 }}>
+          <span className="terminal-prompt">$</span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={answer}
+            onChange={e => setAnswer(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={t('placeholder.answer')}
+            aria-label={t('placeholder.your_answer')}
+            autoComplete="off"
+            disabled={!!feedback}
+          />
+        </div>
+        <button
+          className="btn"
+          onClick={handleSubmit}
+          disabled={!answer.trim() || submitting || !!feedback}
+          style={{ fontSize: '0.85rem' }}
+        >
+          {submitting ? t('btn.submit_loading') : t('btn.submit')}
+        </button>
+      </div>
+
+      {feedback && (
+        <div className={feedback.correct ? 'pass' : 'fail'}>
+          <strong>{feedback.correct ? t('result.pass') : t('result.fail')}</strong>
+          {!feedback.correct && (
+            <span> — {t('result.expected')}<strong>{feedback.expected}</strong></span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

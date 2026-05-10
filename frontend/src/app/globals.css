@@ -34,6 +34,9 @@
   --cat-informatica: #d97706;
   --cat-geometria: #059669;
   --cat-probabilita: #f59e0b;
+  --cat-logica: #d97706;
+  --cat-geometria-analitica: #ec4899;
+  --cat-analisi: #14b8a6;
 }
 
 [data-theme="dark"] {
@@ -68,6 +71,9 @@
   --cat-informatica: #ffcb6b;
   --cat-geometria: #4fd1c5;
   --cat-probabilita: #fbbf24;
+  --cat-logica: #ffcb6b;
+  --cat-geometria-analitica: #f48fb1;
+  --cat-analisi: #4dd0e1;
 }
 
 * {
@@ -537,6 +543,10 @@ input:focus-visible {
   user-select: none;
 }
 
+.shake {
+  animation: shake 0.4s ease;
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 50%, 90% { transform: translateX(-4px); }
@@ -686,4 +696,14 @@ input:focus-visible {
   .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.75rem; }
   .back-to-top { bottom: 1rem; right: 1rem; width: 36px; height: 36px; font-size: 1rem; }
   .nav-inner { height: 52px; }
+}
+
+.node-view-wrapper {
+  padding: 0.5rem 0;
+}
+
+@media (min-width: 769px) {
+  .node-view-wrapper {
+    padding: 0.5rem;
+  }
 }

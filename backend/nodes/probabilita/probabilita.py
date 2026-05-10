@@ -7,7 +7,9 @@ from ..base import Exercise, NodeGenerator
 
 class ProbabilitaGenerator(NodeGenerator):
     def generate(self, level: int) -> Exercise:
-        template = random.choice(["moneta", "dado"] if level > 1 else ["moneta"])
+        templates = ["moneta", "dado", "estrazione", "condizionata"]
+        available = templates[:2] if level == 1 else (templates[:3] if level == 2 else templates)
+        template = random.choice(available)
 
         if level == 1:
             if template == "moneta":
@@ -39,25 +41,52 @@ class ProbabilitaGenerator(NodeGenerator):
                         solution=f"{6-target}/6",
                         hints=[f"I numeri maggiori di {target} sono: {', '.join(str(i) for i in range(target+1, 7))}"],
                     )
+                case "estrazione":
+                    total = random.choice([10, 20])
+                    favorable = random.randint(1, total - 1)
+                    g = math.gcd(favorable, total)
+                    simp = f"{favorable//g}/{total//g}"
+                    return Exercise(
+                        question=f"Un sacchetto ha {total} palline, {favorable} rosse. Probabilità di estrarre una rossa? (frazione)",
+                        solution=simp,
+                        hints=[f"Casi favorevoli / casi possibili = {favorable}/{total}"],
+                    )
 
         else:
-            if random.choice([True, False]):
-                n = random.randint(2, 4)
+            if template == "condizionata":
+                total = random.choice([20, 30, 50])
+                a = random.randint(5, total // 3)
+                b = random.randint(5, total // 3)
+                both = random.randint(1, min(a, b))
+                pa = a / total
+                pb = b / total
+                p_and = both / total
+                p_cond = p_and / pa if pa > 0 else 0
+                g = math.gcd(both, a)
+                simp = f"{both//g}/{a//g}"
                 return Exercise(
-                    question=f"Lanciando 2 dadi, qual è la probabilità che la somma sia 7? (frazione)",
-                    solution="6/36",
-                    hints=["Coppie possibili: (1,6),(2,5),(3,4),(4,3),(5,2),(6,1). Sono 6 su 36."],
+                    question=f"In una classe di {total}, {a} giocano a calcio, {b} a basket, {both} entrambi. P(calcio|basket)? (frazione)",
+                    solution=simp,
+                    hints=[f"P(C|B) = P(C∩B)/P(B) = ({both}/{total})/({b}/{total}) = {both}/{b}"],
                 )
             else:
-                total = random.choice([10, 20, 30])
-                favorable = random.randint(1, total - 1)
-                g = math.gcd(favorable, total)
-                simp = f"{favorable//g}/{total//g}"
-                return Exercise(
-                    question=f"In un sacchetto ci sono {total} palline, di cui {favorable} rosse. Probabilità di estrarre una rossa? (frazione)",
-                    solution=simp,
-                    hints=[f"Casi favorevoli / casi possibili = {favorable}/{total}"],
-                )
+                if random.choice([True, False]):
+                    n = random.randint(2, 4)
+                    return Exercise(
+                        question=f"Lanciando 2 dadi, qual è la probabilità che la somma sia 7? (frazione)",
+                        solution="6/36",
+                        hints=["Coppie possibili: (1,6),(2,5),(3,4),(4,3),(5,2),(6,1). Sono 6 su 36."],
+                    )
+                else:
+                    total = random.choice([10, 20, 30])
+                    favorable = random.randint(1, total - 1)
+                    g = math.gcd(favorable, total)
+                    simp = f"{favorable//g}/{total//g}"
+                    return Exercise(
+                        question=f"In un sacchetto ci sono {total} palline, di cui {favorable} rosse. Probabilità di estrarre una rossa? (frazione)",
+                        solution=simp,
+                        hints=[f"Casi favorevoli / casi possibili = {favorable}/{total}"],
+                    )
 
 
 register("probabilita", ProbabilitaGenerator())

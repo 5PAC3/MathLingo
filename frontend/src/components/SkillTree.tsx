@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { api, type SkillTreeData, type ProgressData, type SkillEdge, type SkillNode } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 
 interface SkillTreeProps {
   nodes?: SkillNode[]
@@ -35,8 +36,11 @@ function getCategoryColor(cat: string): string {
   const vars: Record<string, string> = {
     aritmetica: 'var(--cat-aritmetica)',
     algebra: 'var(--cat-algebra)',
+    logica: 'var(--cat-logica)',
     informatica: 'var(--cat-informatica)',
     geometria: 'var(--cat-geometria)',
+    'geometria-analitica': 'var(--cat-geometria-analitica)',
+    analisi: 'var(--cat-analisi)',
     probabilita: 'var(--cat-probabilita)',
   }
   return vars[cat] || 'var(--fg-muted)'
@@ -44,11 +48,14 @@ function getCategoryColor(cat: string): string {
 
 function getCategoryLabel(cat: string): string {
   const labels: Record<string, string> = {
-    aritmetica: 'Aritmetica',
-    algebra: 'Algebra',
-    informatica: 'Informatica',
-    geometria: 'Geometria',
-    probabilita: 'Probabilit\u00e0',
+    aritmetica: 'cat.short.aritmetica',
+    algebra: 'cat.short.algebra',
+    logica: 'cat.short.logica',
+    informatica: 'cat.short.informatica',
+    geometria: 'cat.short.geometria',
+    'geometria-analitica': 'cat.short.geometria_analitica',
+    analisi: 'cat.short.analisi',
+    probabilita: 'cat.short.probabilita',
   }
   return labels[cat] || cat
 }
@@ -113,6 +120,7 @@ function ConnectorArrow() {
 }
 
 export default function SkillTree({ nodes: propNodes, edges: propEdges, progress: propProgress, onNodeClick }: SkillTreeProps) {
+  const { t } = useI18n()
   const [fetchedTree, setFetchedTree] = useState<SkillTreeData | null>(null)
   const [fetchedProgress, setFetchedProgress] = useState<ProgressData>({})
   const [focusIdx, setFocusIdx] = useState(0)
@@ -121,7 +129,7 @@ export default function SkillTree({ nodes: propNodes, edges: propEdges, progress
 
   useEffect(() => {
     if (!propNodes) {
-      api.get<SkillTreeData>('/skilltree').then(setFetchedTree)
+      api.get<SkillTreeData>('/skilltree').then(setFetchedTree).catch(() => console.error('Failed to fetch skilltree'))
     }
   }, [propNodes])
 
@@ -198,14 +206,14 @@ export default function SkillTree({ nodes: propNodes, edges: propEdges, progress
 
   if (!propNodes && !fetchedTree) {
     return (
-      <div style={{ padding: '3rem 0' }} role="status" aria-label="Caricamento">
+      <div style={{ padding: '3rem 0' }} role="status" aria-label={t('aria.loading')}>
         <div className="spinner" />
       </div>
     )
   }
 
   if (layout.levels.length === 0) {
-    return <p className="text-center text-muted">Nessun nodo disponibile.</p>
+    return <p className="text-center text-muted">{t('node.none')}</p>
   }
 
   let globalIdx = 0
@@ -213,7 +221,7 @@ export default function SkillTree({ nodes: propNodes, edges: propEdges, progress
   return (
     <div
       role="tree"
-      aria-label="Albero delle competenze"
+      aria-label={t('aria.skill_tree')}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -229,13 +237,14 @@ export default function SkillTree({ nodes: propNodes, edges: propEdges, progress
           >
             {nodes.map((node) => {
               const color = getCategoryColor(node.category)
+              const catLabel = t(getCategoryLabel(node.category))
               const idx = globalIdx++
               return (
                 <button
                   key={node.id}
                   ref={el => { nodeRefs.current[idx] = el }}
                   role="treeitem"
-                  aria-label={`${node.label} — ${getCategoryLabel(node.category)}${node.completed ? ' — Completato' : ''}`}
+                  aria-label={node.completed ? t('aria.node_completed', { label: node.label, category: catLabel }) : t('aria.node_label', { label: node.label, category: catLabel })}
                   aria-setsize={nodes.length}
                   aria-posinset={idx + 1}
                   tabIndex={idx === focusIdx ? 0 : -1}
@@ -268,7 +277,7 @@ export default function SkillTree({ nodes: propNodes, edges: propEdges, progress
                     </span>
                     {node.completed && (
                       <span
-                        aria-label="Completato"
+                        aria-label={t('aria.completed')}
                         style={{
                           color,
                           fontSize: '0.8rem',
@@ -288,7 +297,7 @@ export default function SkillTree({ nodes: propNodes, edges: propEdges, progress
                       alignSelf: 'flex-start',
                     }}
                   >
-                    {getCategoryLabel(node.category)}
+                    {catLabel}
                   </span>
                 </button>
               )

@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useI18n } from '@/lib/i18n'
 
 interface LoginFormProps {
   onSuccess: () => void
 }
 
 export default function LoginForm({ onSuccess }: LoginFormProps) {
+  const { t } = useI18n()
   const { login, register } = useAuth()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
@@ -21,9 +23,9 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
     usernameRef.current?.focus()
   }, [mode])
 
-  const submitLabel = mode === 'login' ? 'Entra' : 'Crea account'
-  const toggleLabel = mode === 'login' ? 'Registrati' : 'Accedi'
-  const togglePrompt = mode === 'login' ? 'Non hai un account? ' : 'Hai già un account? '
+  const submitLabel = mode === 'login' ? t('btn.login') : t('btn.register')
+  const toggleLabel = mode === 'login' ? t('btn.register.toggle') : t('btn.login.toggle')
+  const togglePrompt = mode === 'login' ? t('prompt.no_account') : t('prompt.have_account')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,7 +36,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
       else await register(username, password)
       onSuccess()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Errore')
+      setError(err instanceof Error ? err.message : t('error.generic'))
     } finally {
       setBusy(false)
     }
@@ -60,7 +62,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             MathLingo
           </h1>
           <p className="text-muted" style={{ marginTop: '0.25rem' }}>
-            {mode === 'login' ? 'Accedi al tuo account' : 'Crea un nuovo account'}
+            {mode === 'login' ? t('heading.login') : t('heading.register')}
           </p>
         </div>
 
@@ -68,7 +70,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           onSubmit={handleSubmit}
           className="flex flex-col gap-2"
           style={{ marginTop: '1.5rem' }}
-          aria-label={mode === 'login' ? 'Modulo di accesso' : 'Modulo di registrazione'}
+          aria-label={mode === 'login' ? t('aria.login_form') : t('aria.register_form')}
         >
           {error && (
             <div
@@ -88,12 +90,12 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
           <div>
             <label htmlFor="login-username" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
-              Username
+              {t('label.username')}
             </label>
             <input
               id="login-username"
               ref={usernameRef}
-              placeholder="Username"
+              placeholder={t('placeholder.username')}
               value={username}
               onChange={e => setUsername(e.target.value)}
               required
@@ -104,12 +106,12 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
           <div style={{ position: 'relative' }}>
             <label htmlFor="login-password" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
-              Password
+              {t('label.password')}
             </label>
             <input
               id="login-password"
               type={showPw ? 'text' : 'password'}
-              placeholder="Password"
+              placeholder={t('placeholder.password')}
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
@@ -121,7 +123,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               type="button"
               className="btn-ghost btn-sm"
               onClick={() => setShowPw(!showPw)}
-              aria-label={showPw ? 'Nascondi password' : 'Mostra password'}
+              aria-label={showPw ? t('aria.hide_password') : t('aria.show_password')}
               style={{
                 position: 'absolute',
                 right: '0.25rem',
@@ -133,7 +135,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                 padding: '0.3rem 0.4rem',
               }}
             >
-              {showPw ? 'Nascondi' : 'Mostra'}
+              {showPw ? t('btn.hide') : t('btn.show')}
             </button>
           </div>
 
@@ -143,7 +145,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             disabled={busy}
             style={{ marginTop: '0.5rem', width: '100%', fontFamily: 'var(--font-mono)' }}
           >
-            {busy ? 'Caricamento...' : submitLabel}
+            {busy ? t('btn.loading') : submitLabel}
           </button>
         </form>
 

@@ -95,6 +95,7 @@ Nessun altro file da toccare.
 
 ## Deploy
 
-- **Frontend**: build statico su Netlify (da `frontend/out/`)
-- **Backend**: Python FastAPI su Railway (SQLite persistente su `/data`)
+- **Frontend**: build statico su Netlify (da `frontend/out/`) — o Vercel
+- **Backend**: Python FastAPI su Railway (SQLite persistente su `/data`) — o qualsiasi host Python
+- **Database**: SQLite (locale) — per Railway serve volume persistente o migrazione a PostgreSQL
 - **Trigger**: push su `main` → deploy automatico su entrambi
