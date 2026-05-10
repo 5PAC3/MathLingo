@@ -543,6 +543,10 @@ input:focus-visible {
   user-select: none;
 }
 
+.shake {
+  animation: shake 0.4s ease;
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 50%, 90% { transform: translateX(-4px); }

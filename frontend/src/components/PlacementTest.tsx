@@ -49,7 +49,7 @@ export default function PlacementTest() {
       setStats(prev => ({
         ...prev,
         [cat]: {
-          correct: prev[cat]?.correct ?? 0 + (data.correct ? 1 : 0),
+          correct: (prev[cat]?.correct ?? 0) + (data.correct ? 1 : 0),
           total: (prev[cat]?.total ?? 0) + 1,
         },
       }))

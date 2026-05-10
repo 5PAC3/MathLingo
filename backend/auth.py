@@ -13,6 +13,9 @@ from . import database as db
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 if not SECRET_KEY:
     import sys
+    is_production = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER")
+    if is_production:
+        raise RuntimeError("JWT_SECRET_KEY environment variable is required in production")
     print("WARNING: JWT_SECRET_KEY not set, using insecure default (set it in production)", file=sys.stderr)
     SECRET_KEY = "dev-secret-key-do-not-use-in-production"
 ALGORITHM = "HS256"

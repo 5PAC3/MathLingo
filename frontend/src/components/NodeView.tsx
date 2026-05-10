@@ -78,10 +78,19 @@ function renderContent(markdown: string) {
         inLatexBlock = false
       } else {
         const rest = line.slice(2).trim()
-        if (rest) {
-          latexBuffer.push(rest)
+        if (rest.endsWith('$$')) {
+          const formula = rest.slice(0, -2).trim()
+          try {
+            elements.push(<div key={i} dangerouslySetInnerHTML={{ __html: katex.renderToString(formula, { throwOnError: false, displayMode: true }) }} />)
+          } catch {
+            elements.push(<pre key={i}>{line}</pre>)
+          }
+        } else {
+          if (rest) {
+            latexBuffer.push(rest)
+          }
+          inLatexBlock = true
         }
-        inLatexBlock = true
       }
       return
     }
@@ -124,7 +133,7 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
-    api.get<SkillTreeData>('/skilltree').then(setTree)
+    api.get<SkillTreeData>('/skilltree').then(setTree).catch(() => console.error('Failed to fetch skilltree'))
     api
       .get<{ content: string }>(`/content/${nodeId}`)
       .then(res => {
@@ -205,7 +214,7 @@ export default function NodeView({ nodeId, onBack }: NodeViewProps) {
         )}
         <span style={{ fontWeight: 600, color: 'var(--fg)' }}>{nodeInfo?.label || nodeId}</span>
         <span>/</span>
-        <span>{view === 'theory' ? t('breadcrumb.overview') : t('breadcrumb.exercises')}</span>
+        <span>{view === 'theory' ? t('breadcrumb.theory') : t('breadcrumb.exercises')}</span>
       </div>
 
       {nodeInfo && (

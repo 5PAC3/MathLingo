@@ -34,23 +34,27 @@ class EquazioniFratteGenerator(NodeGenerator):
             )
 
         else:
-            a = random.randint(1, 4)
-            b = random.randint(1, 5)
-            c = random.randint(1, 4)
-            d = random.randint(1, 5)
-            eq = sp.Eq(a / (x + b), c / (x + d))
-            sols = sp.solve(eq, x)
-            if len(sols) == 0:
-                return self.generate(level)
-
-            sol = sols[0]
-            domain_check = (sol != -b) and (sol != -d)
-            if not domain_check:
-                return self.generate(level)
+            for _ in range(50):
+                a = random.randint(1, 4)
+                b = random.randint(1, 5)
+                c = random.randint(1, 4)
+                d = random.randint(1, 5)
+                eq = sp.Eq(a / (x + b), c / (x + d))
+                sols = sp.solve(eq, x)
+                if len(sols) == 0:
+                    continue
+                sol = sols[0]
+                domain_check = (sol != -b) and (sol != -d)
+                if domain_check:
+                    return Exercise(
+                        question=f"Risolvi: {a}/(x + {b}) = {c}/(x + {d})",
+                        solution=str(sol),
+                        hints=["Moltiplica a croce e risolvi l'equazione lineare."],
+                    )
 
             return Exercise(
-                question=f"Risolvi: {a}/(x + {b}) = {c}/(x + {d})",
-                solution=str(sol),
+                question=f"Risolvi: 1/(x + 1) = 2/(x + 3)",
+                solution="1",
                 hints=["Moltiplica a croce e risolvi l'equazione lineare."],
             )
 

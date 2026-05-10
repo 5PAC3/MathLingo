@@ -19,7 +19,7 @@ export default function TreePage() {
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
-    api.get<SkillTreeData>('/skilltree').then(setTree)
+    api.get<SkillTreeData>('/skilltree').then(setTree).catch(() => console.error('Failed to fetch skilltree'))
   }, [])
 
   useEffect(() => {

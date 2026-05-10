@@ -46,7 +46,7 @@
     { "id": "limiti", "label": "Limiti", "description": "Calcolo di limiti", "category": "analisi" },
     { "id": "derivate", "label": "Derivate", "description": "Regole di derivazione", "category": "analisi" },
     { "id": "integrali", "label": "Integrali", "description": "Integrali indefiniti e definiti", "category": "analisi" },
-    { "id": "probabilita", "label": "Probabilit\u00e0", "description": "Calcolo delle probabilit\u00e0", "category": "probabilita" },
+    { "id": "probabilita-calcolo", "label": "Probabilit\u00e0", "description": "Calcolo delle probabilit\u00e0", "category": "probabilita" },
     { "id": "statistica", "label": "Statistica", "description": "Media, mediana, moda", "category": "probabilita" },
     { "id": "combinatoria", "label": "Calcolo combinatorio", "description": "Permutazioni, disposizioni, combinazioni", "category": "probabilita" }
   ],
@@ -93,12 +93,12 @@
     { "from": "circonferenza", "to": "geometria-solida" },
     { "from": "geometria-solida", "to": "trigonometria" },
     { "from": "trigonometria", "to": "funzioni" },
-    { "from": "trigonometria", "to": "probabilita" },
+    { "from": "trigonometria", "to": "probabilita-calcolo" },
     { "from": "funzioni", "to": "limiti" },
     { "from": "limiti", "to": "derivate" },
     { "from": "derivate", "to": "integrali" },
-    { "from": "integrali", "to": "probabilita" },
-    { "from": "probabilita", "to": "combinatoria" },
-    { "from": "probabilita", "to": "statistica" }
+    { "from": "integrali", "to": "probabilita-calcolo" },
+    { "from": "probabilita-calcolo", "to": "combinatoria" },
+    { "from": "probabilita-calcolo", "to": "statistica" }
   ]
 }

@@ -26,7 +26,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       localStorage.removeItem('username')
     }
     const body = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new ApiError(res.status, body.detail || 'Errore sconosciuto')
+    throw new ApiError(res.status, body.detail || 'Unknown error')
   }
 
   return res.json()

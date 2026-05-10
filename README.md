@@ -99,5 +99,6 @@ Nessun altro file da toccare.
 
 ## Hosting
 
-- **Frontend**: GitHub Pages (o Vercel)
-- **Backend**: Render piano free (o qualsiasi host Python)
+- **Frontend**: Netlify (o Vercel)
+- **Backend**: Railway (o qualsiasi host Python)
+- **Database**: SQLite (locale) — per Railway serve volume persistente o migrazione a PostgreSQL

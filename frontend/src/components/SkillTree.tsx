@@ -129,7 +129,7 @@ export default function SkillTree({ nodes: propNodes, edges: propEdges, progress
 
   useEffect(() => {
     if (!propNodes) {
-      api.get<SkillTreeData>('/skilltree').then(setFetchedTree)
+      api.get<SkillTreeData>('/skilltree').then(setFetchedTree).catch(() => console.error('Failed to fetch skilltree'))
     }
   }, [propNodes])
 

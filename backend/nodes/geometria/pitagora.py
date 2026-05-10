@@ -15,7 +15,7 @@ class PitagoraGenerator(NodeGenerator):
             if (c1**2 + c2**2) != ip**2:
                 return self.generate(level)
 
-            if template == "ipotenusa" or True:
+            if True:
                 return Exercise(
                     question=f"In un triangolo rettangolo, i cateti misurano {c1} e {c2}. Quanto misura l'ipotenusa?",
                     solution=str(ip),

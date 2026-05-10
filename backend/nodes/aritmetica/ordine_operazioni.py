@@ -4,9 +4,6 @@ from .. import register
 from ..base import Exercise, NodeGenerator
 
 
-OPS = {"+": lambda a, b: a + b, "-": lambda a, b: a - b}
-
-
 class OrdineOperazioniGenerator(NodeGenerator):
     def generate(self, level: int) -> Exercise:
         template = random.choice(["standard", "completamento"] if level > 1 else ["standard"])
@@ -16,11 +13,11 @@ class OrdineOperazioniGenerator(NodeGenerator):
             b = random.randint(2, 9)
             c = random.randint(2, 9)
             if random.choice([True, False]):
-                expr = f"{a} + {b} \\u00d7 {c}"
+                expr = f"{a} + {b} \u00d7 {c}"
                 val = a + b * c
                 hints = ["Prima la moltiplicazione, poi l'addizione."]
             else:
-                expr = f"{a} \\u00d7 {b} - {c}"
+                expr = f"{a} \u00d7 {b} - {c}"
                 val = a * b - c
                 hints = ["Prima la moltiplicazione, poi la sottrazione."]
 
@@ -40,11 +37,11 @@ class OrdineOperazioniGenerator(NodeGenerator):
             c = random.randint(2, 9)
 
             if random.choice([True, False]):
-                expr = f"({a} + {b}) \\u00d7 {c}"
+                expr = f"({a} + {b}) \u00d7 {c}"
                 val = (a + b) * c
                 hints = ["Prima calcola la parentesi, poi moltiplica."]
             else:
-                expr = f"{a} \\u00d7 ({b} + {c})"
+                expr = f"{a} \u00d7 ({b} + {c})"
                 val = a * (b + c)
                 hints = ["Prima la parentesi, poi la moltiplicazione."]
 
@@ -64,13 +61,13 @@ class OrdineOperazioniGenerator(NodeGenerator):
             d = random.randint(2, 9)
 
             variants = [
-                (f"({a} + {b}) \\u00d7 {c} - {d}", (a + b) * c - d,
+                (f"({a} + {b}) \u00d7 {c} - {d}", (a + b) * c - d,
                  ["Calcola la parentesi, moltiplica, poi sottrai."]),
-                (f"{a} \\u00d7 ({b} + {c}) - {d}", a * (b + c) - d,
+                (f"{a} \u00d7 ({b} + {c}) - {d}", a * (b + c) - d,
                  ["Priorità: parentesi, moltiplicazione, sottrazione."]),
-                (f"({a} + {b} + {c}) \\u00d7 {d}", (a + b + c) * d,
+                (f"({a} + {b} + {c}) \u00d7 {d}", (a + b + c) * d,
                  ["Somma dentro la parentesi, poi moltiplica."]),
-                (f"{a} \\u00d7 {b} - {c} \\u00d7 {d}", a * b - c * d,
+                (f"{a} \u00d7 {b} - {c} \u00d7 {d}", a * b - c * d,
                  ["Calcola le moltiplicazioni separatamente, poi sottrai."]),
             ]
             expr, val, hints = random.choice(variants)

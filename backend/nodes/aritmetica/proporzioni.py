@@ -11,6 +11,10 @@ class ProporzioniGenerator(NodeGenerator):
             a = random.randint(1, 10)
             b = random.randint(1, 10)
             c = random.randint(1, 10)
+            while (b * c) % a != 0:
+                a = random.randint(1, 10)
+                b = random.randint(1, 10)
+                c = random.randint(1, 10)
             d = b * c // a
             if random.choice([True, False]):
                 return Exercise(
@@ -19,10 +23,15 @@ class ProporzioniGenerator(NodeGenerator):
                     hints=[f"{a} : {b} = {c} : x → x = ({b} × {c}) / {a}"],
                 )
             else:
+                b2 = random.randint(1, 10)
+                c2 = random.randint(1, 10)
+                while (a * b2) % c2 != 0:
+                    b2 = random.randint(1, 10)
+                    c2 = random.randint(1, 10)
                 return Exercise(
-                    question=f"Trova x: x : {a} = {b} : {c}",
-                    solution=str(a * b // c),
-                    hints=[f"x = ({a} × {b}) / {c}"],
+                    question=f"Trova x: x : {a} = {b2} : {c2}",
+                    solution=str(a * b2 // c2),
+                    hints=[f"x = ({a} × {b2}) / {c2}"],
                 )
 
         elif level == 2:
