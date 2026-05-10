@@ -3,7 +3,8 @@ import sqlite3
 import threading
 from pathlib import Path
 
-_DB_PATH = Path(os.environ.get("DATABASE_PATH", Path(__file__).parent / "mathlingo.db"))
+_DEFAULT_DB = Path("/data/mathlingo.db") if Path("/data").exists() else Path(__file__).parent / "mathlingo.db"
+_DB_PATH = Path(os.environ.get("DATABASE_PATH", _DEFAULT_DB))
 _lock = threading.Lock()
 
 
