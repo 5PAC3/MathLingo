@@ -39,6 +39,21 @@ function categoryColor(cat: string): string {
   return vars[cat] || 'var(--primary)'
 }
 
+function renderInline(text: string): string {
+  let html = text
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  html = html.replace(/\$([^\$]+)\$/g, (_, formula) => {
+    try {
+      return katex.renderToString(formula, { throwOnError: false, displayMode: false })
+    } catch {
+      return formula
+    }
+  })
+  return html
+}
+
 function renderLine(line: string) {
   if (line.startsWith('$$') && line.endsWith('$$') && line.length > 4) {
     const formula = line.slice(2, -2).trim()
@@ -48,14 +63,7 @@ function renderLine(line: string) {
       return <pre>{line}</pre>
     }
   }
-  const processed = line.replace(/\$([^\$]+)\$/g, (_, formula) => {
-    try {
-      return katex.renderToString(formula, { throwOnError: false, displayMode: false })
-    } catch {
-      return formula
-    }
-  })
-  return <span dangerouslySetInnerHTML={{ __html: processed }} />
+  return <span dangerouslySetInnerHTML={{ __html: renderInline(line) }} />
 }
 
 function renderContent(markdown: string) {
@@ -100,11 +108,11 @@ function renderContent(markdown: string) {
     }
 
     if (line.startsWith('# ')) {
-      elements.push(<h1 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 800, marginTop: '1rem', marginBottom: '0.75rem' }}>{line.slice(2)}</h1>)
+      elements.push(<h1 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 800, marginTop: '1rem', marginBottom: '0.75rem' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(2)) }} />)
     } else if (line.startsWith('## ')) {
-      elements.push(<h2 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem', fontWeight: 700, marginTop: '1rem', marginBottom: '0.5rem' }}>{line.slice(3)}</h2>)
+      elements.push(<h2 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem', fontWeight: 700, marginTop: '1rem', marginBottom: '0.5rem' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(3)) }} />)
     } else if (line.startsWith('### ')) {
-      elements.push(<h3 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', fontWeight: 600, marginTop: '0.75rem', marginBottom: '0.4rem' }}>{line.slice(4)}</h3>)
+      elements.push(<h3 key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', fontWeight: 600, marginTop: '0.75rem', marginBottom: '0.4rem' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(4)) }} />)
     } else if (line.startsWith('- ')) {
       elements.push(<li key={i} style={{ marginLeft: '1.5rem', marginBottom: '0.2rem' }}>{renderLine(line.slice(2))}</li>)
     } else if (line.startsWith('| ')) {
